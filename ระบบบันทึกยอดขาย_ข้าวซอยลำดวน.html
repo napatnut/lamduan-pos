@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ระบบบันทึกยอดขาย | ข้าวซอยลำดวนฟ้าฮ่าม</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* ========================================================================
+   CONFIG: แก้ไขค่า GP% และ URL Google Sheet ที่ <script> ด้านล่าง
+   ======================================================================== */
+:root {
+  --primary: #D97706;
+  --primary-dark: #B45309;
+  --income-green: #059669;
+  --income-light: #D1FAE5;
+  --expense-red: #DC2626;
+  --expense-light: #FEE2E2;
+  --cash-blue: #2563EB;
+  --cash-light: #DBEAFE;
+  --defer-orange: #F59E0B;
+  --defer-light: #FEF3C7;
+  --defer-dark: #B45309;
+  --text-main: #111827;
+  --text-muted: #4B5563;
+  --bg-light: #FFFBEB;
+  --border: #E5E7EB;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'Sarabun', 'Prompt', 'Segoe UI', sans-serif;
+  font-size: 20px;
+  line-height: 1.6;
+  color: var(--text-main);
+  background: var(--bg-light);
+  min-height: 100vh;
+  -webkit-text-size-adjust: 100%;
+}
+
+.container { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+/* ========== HEADER ========== */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 20px 16px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(217,119,6,0.3);
+  text-align: center;
+}
+.header h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+.header .sub { font-size: 18px; opacity: 0.95; }
+.header .branch-info {
+  margin-top: 10px;
+  background: rgba(255,255,255,0.2);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+/* ========== PROGRESS BAR ========== */
+.progress {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 6px;
+}
+.progress .step {
+  flex: 1;
+  text-align: center;
+  padding: 12px 4px;
+  background: white;
+  border: 3px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.progress .step.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(217,119,6,0.4);
+}
+.progress .step.done { background: var(--income-green); color: white; border-color: var(--income-green); }
+.progress .step .num { display: block; font-size: 24px; font-weight: 900; }
+
+/* ========== SECTION CARDS ========== */
+.section {
+  display: none;
+  background: white;
+  border-radius: 20px;
+  padding: 24px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+.section.active { display: block; animation: slideIn 0.3s ease; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.section-title {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 4px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ========== INPUT ROW ========== */
+.input-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 12px;
+  background: #F9FAFB;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+.input-row:focus-within { background: white; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(217,119,6,0.15); }
+
+.platform-icon {
+  width: 72px; height: 72px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 900;
+  color: white;
+  text-align: center;
+  line-height: 1.1;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.icon-grab     { background: #00B14F; }
+.icon-lineman  { background: #06C755; }
+.icon-shopee   { background: #EE4D2D; }
+.icon-panda    { background: #D70F64; }
+.icon-robin    { background: #7B2CBF; }
+.icon-other    { background: #6B7280; }
+.icon-scan     { background: var(--cash-blue); font-size: 36px; }
+.icon-cash     { background: var(--income-green); font-size: 36px; }
+.icon-expense  { background: var(--expense-red); font-size: 36px; }
+.icon-defer    { background: var(--defer-orange); font-size: 28px; }
+
+.input-block { display: flex; flex-direction: column; gap: 4px; }
+.input-label { font-size: 18px; font-weight: 700; color: var(--text-muted); }
+.input-group { display: flex; align-items: center; gap: 8px; }
+.money-input {
+  flex: 1;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 14px 16px;
+  border: 3px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  width: 100%;
+  color: var(--text-main);
+  text-align: right;
+  -moz-appearance: textfield;
+}
+.money-input::-webkit-outer-spin-button,
+.money-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.money-input:focus { outline: none; border-color: var(--primary); background: #FFFBEB; }
+.baht { font-size: 22px; font-weight: 700; color: var(--text-muted); }
+
+.auto-calc {
+  margin-top: 8px;
+  padding: 8px 14px;
+  background: var(--income-light);
+  color: var(--income-green);
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ========== NAV BUTTONS ========== */
+.nav-buttons { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-top: 20px; }
+.btn {
+  font-size: 22px;
+  font-weight: 800;
+  padding: 22px 16px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(217,119,6,0.35); }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-back { background: #E5E7EB; color: var(--text-main); }
+.btn-success {
+  background: var(--income-green);
+  color: white;
+  font-size: 26px;
+  padding: 26px 16px;
+  box-shadow: 0 4px 14px rgba(5,150,105,0.4);
+}
+.btn-full { grid-column: 1 / -1; }
+
+/* ========== EXPENSE ITEMS (Redesigned with Status Toggle) ========== */
+.expense-group-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 20px 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.expense-group-title.old {
+  background: var(--defer-light);
+  color: var(--defer-dark);
+  border-left: 6px solid var(--defer-orange);
+}
+.expense-group-title.today {
+  background: var(--expense-light);
+  color: var(--expense-red);
+  border-left: 6px solid var(--expense-red);
+}
+
+/* รายการรายจ่ายแบบใหม่ - มี Toggle สถานะ */
+.expense-card {
+  background: white;
+  border: 3px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.expense-card.paid { border-color: var(--income-green); background: #F0FDF4; }
+.expense-card.defer { border-color: var(--defer-orange); background: #FFFBEB; }
+
+.expense-row-inputs {
+  display: grid;
+  grid-template-columns: 1fr 140px auto;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.expense-row-inputs input[type="text"],
+.expense-row-inputs input[type="number"] {
+  font-size: 20px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  background: white;
+}
+.expense-row-inputs input[type="number"] { text-align: right; font-weight: 700; }
+.expense-row-inputs input:focus { outline: none; border-color: var(--primary); }
+.btn-remove {
+  background: var(--expense-red);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 22px;
+  font-weight: 900;
+  width: 56px;
+  cursor: pointer;
+}
+
+/* สวิตช์สถานะใหญ่ๆ 2 ปุ่ม */
+.status-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #F3F4F6;
+  padding: 4px;
+  border-radius: 12px;
+}
+.status-btn {
+  padding: 14px 8px;
+  font-size: 18px;
+  font-weight: 800;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.status-btn.active-paid {
+  background: var(--income-green);
+  color: white;
+  box-shadow: 0 2px 8px rgba(5,150,105,0.35);
+}
+.status-btn.active-defer {
+  background: var(--defer-orange);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.35);
+}
+
+/* รายการค้างเก่า (compact checkbox-style) */
+.old-expense-card {
+  background: white;
+  border: 3px solid var(--defer-orange);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.old-expense-card.paying { border-color: var(--income-green); background: #F0FDF4; }
+.old-expense-info strong { display: block; font-size: 20px; }
+.old-expense-info small { color: var(--text-muted); }
+.old-expense-info .amount {
+  color: var(--defer-dark);
+  font-weight: 800;
+  font-size: 22px;
+}
+.old-expense-card.paying .old-expense-info .amount { color: var(--income-green); }
+
+.btn-add-expense {
+  width: 100%;
+  padding: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  background: white;
+  color: var(--expense-red);
+  border: 3px dashed var(--expense-red);
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* ========== SUMMARY (RECEIPT) MODAL ========== */
+.summary-modal {
+  max-width: 480px;
+  width: 100%;
+  max-height: 95vh;
+  overflow-y: auto;
+  padding: 0;
+  background: #F9FAFB;
+}
+
+.receipt-card {
+  background: white;
+  padding: 24px 20px;
+  font-family: 'Sarabun', 'Prompt', sans-serif;
+}
+
+.receipt-header {
+  text-align: center;
+  border-bottom: 3px dashed var(--primary);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+.receipt-logo { font-size: 48px; line-height: 1; }
+.receipt-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--primary-dark);
+  margin-top: 4px;
+}
+.receipt-subtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.receipt-success {
+  display: inline-block;
+  background: var(--income-light);
+  color: var(--income-green);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 17px;
+  margin-top: 4px;
+}
+
+.receipt-meta {
+  background: #FEF3C7;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 16px;
+}
+.meta-label { color: var(--text-muted); font-weight: 700; }
+.meta-value { color: var(--text-main); font-weight: 800; }
+
+.receipt-section {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+.section-head {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 15px;
+}
+.receipt-line span { color: var(--text-muted); }
+.receipt-line strong { color: var(--text-main); font-weight: 800; }
+.section-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--income-green);
+}
+
+.receipt-summary {
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 16px 0 12px;
+  border: 2px solid var(--border);
+}
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.summary-line strong { font-size: 18px; font-weight: 900; }
+.summary-line.income { background: var(--income-light); color: var(--income-green); }
+.summary-line.expense { background: var(--expense-light); color: var(--expense-red); }
+.summary-line.cash-box {
+  background: var(--cash-blue);
+  color: white;
+  padding: 12px;
+  font-size: 17px;
+}
+.summary-line.cash-box strong { font-size: 22px; }
+.summary-line.profit-box {
+  background: linear-gradient(135deg, var(--income-green), #047857);
+  color: white;
+  padding: 14px;
+  font-size: 18px;
+}
+.summary-line.profit-box strong { font-size: 26px; }
+
+.receipt-footer {
+  text-align: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--primary);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.summary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+  background: white;
+  position: sticky;
+  bottom: 0;
+  border-top: 2px solid var(--border);
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+}
+
+/* ========== CASH ALERT MODAL (กระพริบสีแดง) ========== */
+.cash-alert-modal {
+  border: 6px solid var(--expense-red);
+  animation: redFlash 0.9s infinite;
+  text-align: center;
+}
+@keyframes redFlash {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7), 0 20px 60px rgba(220,38,38,0.5);
+    border-color: var(--expense-red);
+  }
+  50% {
+    box-shadow: 0 0 0 24px rgba(220, 38, 38, 0), 0 20px 60px rgba(220,38,38,0.5);
+    border-color: #991B1B;
+  }
+}
+.cash-alert-icon {
+  font-size: 72px;
+  margin-bottom: 6px;
+  animation: shake 0.5s infinite;
+  display: inline-block;
+}
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+.cash-alert-amount {
+  background: var(--expense-light);
+  color: var(--expense-red);
+  font-size: 28px;
+  font-weight: 900;
+  padding: 16px;
+  border-radius: 14px;
+  border: 3px dashed var(--expense-red);
+  margin-top: 8px;
+}
+
+/* ========== CASH WARNING (สำคัญ) ========== */
+.cash-warning {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.cash-warning.ok { background: var(--income-light); color: var(--income-green); border: 3px solid var(--income-green); }
+.cash-warning.alert {
+  background: var(--expense-light);
+  color: var(--expense-red);
+  border: 3px solid var(--expense-red);
+  animation: pulseRed 1.5s infinite;
+}
+@keyframes pulseRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+  50%      { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
+}
+.cash-warning .big-num { font-size: 28px; font-weight: 900; display: block; margin: 4px 0; }
+
+/* ========== SUMMARY ========== */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  background: #F9FAFB;
+  border-radius: 12px;
+  font-size: 20px;
+}
+.summary-row .label { font-weight: 700; color: var(--text-muted); }
+.summary-row .value { font-weight: 800; font-size: 22px; }
+
+.highlight-card {
+  background: linear-gradient(135deg, var(--cash-blue), #1D4ED8);
+  color: white;
+  padding: 24px;
+  border-radius: 18px;
+  margin: 16px 0;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+}
+.highlight-card .caption { font-size: 20px; font-weight: 700; opacity: 0.95; margin-bottom: 6px; }
+.highlight-card .amount { font-size: 48px; font-weight: 900; letter-spacing: -1px; line-height: 1.1; }
+.highlight-card .sub-note { margin-top: 8px; font-size: 16px; opacity: 0.85; }
+
+.profit-card {
+  background: linear-gradient(135deg, var(--income-green), #047857);
+  color: white;
+  padding: 20px;
+  border-radius: 18px;
+  margin: 12px 0;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(5,150,105,0.35);
+}
+.profit-card .caption { font-size: 18px; font-weight: 700; opacity: 0.95; }
+.profit-card .amount { font-size: 40px; font-weight: 900; }
+
+.defer-card {
+  background: linear-gradient(135deg, var(--defer-orange), #D97706);
+  color: white;
+  padding: 16px;
+  border-radius: 16px;
+  margin: 12px 0;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+}
+.defer-card .caption { font-size: 16px; font-weight: 700; opacity: 0.95; }
+.defer-card .amount { font-size: 30px; font-weight: 900; }
+.defer-card .sub-note { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+
+/* ========== MODAL ========== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal-backdrop.hidden { display: none; }
+.modal {
+  background: white;
+  border-radius: 20px;
+  padding: 28px 24px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal h2 { font-size: 26px; font-weight: 800; margin-bottom: 8px; color: var(--primary); text-align: center; }
+.modal p { font-size: 18px; color: var(--text-muted); text-align: center; margin-bottom: 20px; }
+.branch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.branch-btn {
+  padding: 28px 14px;
+  font-size: 22px;
+  font-weight: 800;
+  background: white;
+  color: var(--primary-dark);
+  border: 4px solid var(--primary);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.branch-btn:hover, .branch-btn:active {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.03);
+}
+.branch-btn .em { display: block; font-size: 32px; margin-bottom: 4px; }
+
+/* ========== DATE DISPLAY ========== */
+.date-display {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #FEF3C7;
+  border-radius: 10px;
+  text-align: center;
+}
+
+/* ========== TOAST ========== */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--expense-red);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 200;
+  display: none;
+  max-width: 90%;
+  text-align: center;
+}
+.toast.show { display: block; animation: popIn 0.3s; }
+.toast.success { background: var(--income-green); }
+@keyframes popIn {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ========== CONFIRM SUMMARY ========== */
+.confirm-summary {
+  max-height: 50vh;
+  overflow-y: auto;
+  background: #F9FAFB;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 18px;
+  line-height: 1.8;
+}
+.confirm-summary strong { color: var(--primary-dark); }
+
+.help-text {
+  font-size: 16px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #FEF3C7;
+  border-radius: 10px;
+  border-left: 4px solid var(--defer-orange);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 480px) {
+  html, body { font-size: 18px; }
+  .header h1 { font-size: 24px; }
+  .section-title { font-size: 22px; }
+  .money-input { font-size: 24px; padding: 12px; }
+  .highlight-card .amount { font-size: 40px; }
+  .input-row { grid-template-columns: 64px 1fr; padding: 10px; }
+  .platform-icon { width: 60px; height: 60px; font-size: 24px; }
+  .branch-grid { grid-template-columns: 1fr; }
+  .expense-row-inputs { grid-template-columns: 1fr 110px auto; }
+  .status-btn { font-size: 16px; padding: 12px 4px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================ MODAL เลือกสาขา ================ -->
+<div class="modal-backdrop" id="branchModal">
+  <div class="modal">
+    <h2>เลือกสาขาที่ทำงาน</h2>
+    <p>กรุณาเลือกสาขาก่อนเริ่มบันทึกยอดขาย</p>
+    <div class="branch-grid">
+      <button class="branch-btn" onclick="selectBranch('วิภาวดี')"><span class="em">🏪</span>วิภาวดี</button>
+      <button class="branch-btn" onclick="selectBranch('สาทร')"><span class="em">🏪</span>สาทร</button>
+      <button class="branch-btn" onclick="selectBranch('บรรทัดทอง')"><span class="em">🏪</span>บรรทัดทอง</button>
+      <button class="branch-btn" onclick="selectBranch('ประดิพัทธ์')"><span class="em">🏪</span>ประดิพัทธ์</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================ POPUP เตือนเงินสดไม่พอ (กระพริบสีแดง) ================ -->
+<div class="modal-backdrop hidden" id="cashAlertModal">
+  <div class="modal cash-alert-modal">
+    <div class="cash-alert-icon">⚠️</div>
+    <h2 style="color: var(--expense-red); text-align:center; font-size:30px; margin-bottom:8px;">เงินสดไม่พอจ่าย!</h2>
+    <div class="cash-alert-amount" id="cashAlertAmount">เงินสดไม่พอ 0 ฿</div>
+    <p style="text-align:center; font-size:19px; color:var(--text-main); margin: 18px 0; font-weight:600;">
+      💡 <strong>แนะนำ:</strong> กดปุ่ม <span style="background:var(--defer-orange); color:white; padding:4px 10px; border-radius:8px; font-weight:800;">⏳ ยกไปพรุ่งนี้</span> สำหรับบางรายการ
+    </p>
+    <button class="btn btn-primary" style="width:100%; background: var(--expense-red); font-size:22px;" onclick="closeCashAlert()">
+      ✕ ปิดหน้าต่าง รับทราบแล้ว
+    </button>
+  </div>
+</div>
+
+<!-- ================ MODAL ยืนยันก่อนส่ง ================ -->
+<div class="modal-backdrop hidden" id="confirmModal">
+  <div class="modal">
+    <h2>ยืนยันการส่งข้อมูล</h2>
+    <p>กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนกดยืนยัน</p>
+    <div class="confirm-summary" id="confirmSummary"></div>
+    <div class="nav-buttons">
+      <button class="btn btn-back" onclick="closeConfirm()">← แก้ไข</button>
+      <button class="btn btn-success" onclick="submitData()">✓ ยืนยันส่ง</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ================ MODAL สรุปยอดขาย (หลังส่งสำเร็จ) ================ -->
+<div class="modal-backdrop hidden" id="summaryModal">
+  <div class="modal summary-modal">
+
+    <!-- พื้นที่ที่จะถูกแคปเจอร์เป็นรูป -->
+    <div id="receiptCard" class="receipt-card">
+      <div class="receipt-header">
+        <div class="receipt-logo">🍜</div>
+        <div class="receipt-title">ข้าวซอยลำดวนฟ้าฮ่าม</div>
+        <div class="receipt-subtitle">สรุปยอดขายประจำวัน</div>
+        <div class="receipt-success">✅ ส่งข้อมูลเรียบร้อย</div>
+      </div>
+
+      <div class="receipt-meta">
+        <div class="meta-item">
+          <span class="meta-label">📍 สาขา</span>
+          <span class="meta-value" id="rcpBranch">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">📅 วันที่</span>
+          <span class="meta-value" id="rcpDate">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">🕐 เวลา</span>
+          <span class="meta-value" id="rcpTime">-</span>
+        </div>
+      </div>
+
+      <div class="receipt-section">
+        <div class="section-head">🛵 ยอดสุทธิ Delivery</div>
+        <div id="rcpDelivery"></div>
+        <div class="section-total">
+          <span>รวม Delivery สุทธิ</span>
+          <strong id="rcpDeliveryTotal">0 ฿</strong>
+        </div>
+      </div>
+
+      <div class="receipt-section">
+        <div class="section-head">🏪 หน้าร้าน</div>
+        <div class="receipt-line">
+          <span>ยอดรวมหน้าร้าน</span><strong id="rcpDineTotal">0 ฿</strong>
+        </div>
+        <div class="receipt-line">
+          <span>&nbsp;&nbsp;💵 เงินสด</span><strong id="rcpCash">0 ฿</strong>
+        </div>
+        <div class="receipt-line">
+          <span>&nbsp;&nbsp;📱 สแกน QR</span><strong id="rcpScan">0 ฿</strong>
+        </div>
+        <div class="receipt-line">
+          <span>&nbsp;&nbsp;🎫 คนละครึ่ง</span><strong id="rcpGov">0 ฿</strong>
+        </div>
+      </div>
+
+      <div class="receipt-section" id="rcpExpenseSection">
+        <div class="section-head" style="color:#DC2626;">💸 รายจ่ายจริงวันนี้</div>
+        <div id="rcpExpenseList"></div>
+        <div class="section-total" style="color:#DC2626;">
+          <span>รวมรายจ่ายจริง</span>
+          <strong id="rcpExpenseTotal">0 ฿</strong>
+        </div>
+      </div>
+
+      <div class="receipt-section" id="rcpDeferSection" style="display:none;">
+        <div class="section-head" style="color:#D97706;">⏳ ยกไปจ่ายพรุ่งนี้</div>
+        <div id="rcpDeferList"></div>
+        <div class="section-total" style="color:#D97706;">
+          <span>รวมยกไปพรุ่งนี้</span>
+          <strong id="rcpDeferTotal">0 ฿</strong>
+        </div>
+      </div>
+
+      <div class="receipt-summary">
+        <div class="summary-line income">
+          <span>💚 รายรับรวม</span>
+          <strong id="rcpRevenue">0 ฿</strong>
+        </div>
+        <div class="summary-line expense">
+          <span>💔 รายจ่ายจริง</span>
+          <strong id="rcpExpenseSum">0 ฿</strong>
+        </div>
+        <div class="summary-line cash-box">
+          <span>📦 เงินส่งคืนเจ้าของ</span>
+          <strong id="rcpCashOwner">0 ฿</strong>
+        </div>
+        <div class="summary-line profit-box">
+          <span>✨ กำไรสุทธิ</span>
+          <strong id="rcpProfit">0 ฿</strong>
+        </div>
+      </div>
+
+      <div class="receipt-footer">
+        🍜 ข้าวซอยลำดวนฟ้าฮ่าม · บันทึกอัตโนมัติเข้าระบบ
+      </div>
+    </div>
+
+    <!-- ปุ่ม Action ด้านล่าง (ไม่ถูกแคปเจอร์) -->
+    <div class="summary-actions">
+      <button class="btn btn-success" onclick="saveSummaryAsImage()" style="font-size:18px; padding:16px;">💾 บันทึกเป็นรูป</button>
+      <button class="btn btn-primary" onclick="shareSummary()" style="font-size:18px; padding:16px;">📤 แชร์</button>
+      <button class="btn btn-back" onclick="closeSummaryAndReset()" style="font-size:18px; padding:16px; grid-column: 1 / -1;">✓ เสร็จสิ้น</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>🍜 ข้าวซอยลำดวนฟ้าฮ่าม</h1>
+    <div class="sub">ระบบบันทึกยอดขายประจำวัน</div>
+    <div class="branch-info" id="branchLabel">— ยังไม่เลือกสาขา —</div>
+    <a href="Admin_ตั้งค่าGP.html" style="display:inline-block;margin-top:10px;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:14px;">⚙️ Admin · ตั้งค่า GP</a>
+  </div>
+
+  <div class="date-display" id="dateDisplay">📅 วันที่ ...</div>
+
+  <!-- PROGRESS -->
+  <div class="progress" id="progressBar">
+    <div class="step active" data-step="1"><span class="num">1</span>Delivery</div>
+    <div class="step" data-step="2"><span class="num">2</span>หน้าร้าน</div>
+    <div class="step" data-step="3"><span class="num">3</span>รายจ่าย</div>
+    <div class="step" data-step="4"><span class="num">4</span>สรุปยอด</div>
+  </div>
+
+  <!-- ================ SECTION 1: DELIVERY ================ -->
+  <div class="section active" id="section-1">
+    <div class="section-title">🛵 ส่วนที่ 1: ยอดจากแอพเดลิเวอรี่</div>
+    <p class="help-text">💡 กรอก <strong>ยอดรวม Gross</strong> (ยอดก่อนหัก GP) ระบบจะคำนวณยอดสุทธิให้อัตโนมัติ</p>
+
+    <div class="input-row">
+      <div class="platform-icon icon-grab">Grab</div>
+      <div class="input-block">
+        <div class="input-label">Grab Food (หัก 32%)</div>
+        <div class="input-group">
+          <input type="number" class="money-input delivery-input" id="grab" placeholder="0" min="0" step="1" inputmode="decimal" data-rate="0.68">
+          <span class="baht">บาท</span>
+        </div>
+        <div class="auto-calc" id="grab-net">ยอดสุทธิที่ได้ <span>0 ฿</span></div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="platform-icon icon-lineman">LINE<br>MAN</div>
+      <div class="input-block">
+        <div class="input-label">LINE MAN (หัก 32%)</div>
+        <div class="input-group">
+          <input type="number" class="money-input delivery-input" id="lineman" placeholder="0" min="0" step="1" inputmode="decimal" data-rate="0.68">
+          <span class="baht">บาท</span>
+        </div>
+        <div class="auto-calc" id="lineman-net">ยอดสุทธิที่ได้ <span>0 ฿</span></div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="platform-icon icon-shopee">Shopee</div>
+      <div class="input-block">
+        <div class="input-label">Shopee Food (หัก 32%)</div>
+        <div class="input-group">
+          <input type="number" class="money-input delivery-input" id="shopee" placeholder="0" min="0" step="1" inputmode="decimal" data-rate="0.68">
+          <span class="baht">บาท</span>
+        </div>
+        <div class="auto-calc" id="shopee-net">ยอดสุทธิที่ได้ <span>0 ฿</span></div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="platform-icon icon-robin">Robin<br>hood</div>
+      <div class="input-block">
+        <div class="input-label">Robinhood (หัก 30%)</div>
+        <div class="input-group">
+          <input type="number" class="money-input delivery-input" id="robin" placeholder="0" min="0" step="1" inputmode="decimal" data-rate="0.70">
+          <span class="baht">บาท</span>
+        </div>
+        <div class="auto-calc" id="robin-net">ยอดสุทธิที่ได้ <span>0 ฿</span></div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="platform-icon icon-other">อื่นๆ</div>
+      <div class="input-block">
+        <div class="input-label">แอพอื่นๆ (หัก 30%)</div>
+        <div class="input-group">
+          <input type="number" class="money-input delivery-input" id="other" placeholder="0" min="0" step="1" inputmode="decimal" data-rate="0.70">
+          <span class="baht">บาท</span>
+        </div>
+        <div class="auto-calc" id="other-net">ยอดสุทธิที่ได้ <span>0 ฿</span></div>
+      </div>
+    </div>
+
+    <div class="summary-row" style="background: var(--income-light); margin-top: 16px;">
+      <span class="label">💰 รวมยอดสุทธิ Delivery ทั้งหมด</span>
+      <span class="value" id="deliveryTotal" style="color: var(--income-green);">0 ฿</span>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-back" disabled style="visibility:hidden">← ย้อน</button>
+      <button class="btn btn-primary" onclick="goToStep(2)">ถัดไป →</button>
+    </div>
+  </div>
+
+  <!-- ================ SECTION 2: หน้าร้าน ================ -->
+  <div class="section" id="section-2">
+    <div class="section-title">🏪 ส่วนที่ 2: ยอดหน้าร้าน</div>
+    <p class="help-text">💡 กรอก <strong>ยอดขายหน้าร้านทั้งหมด</strong> และ <strong>ยอดที่ลูกค้าสแกนจ่าย</strong> ระบบจะคำนวณเงินสดในลิ้นชักให้อัตโนมัติ</p>
+
+    <div class="input-row">
+      <div class="platform-icon icon-cash">🧾</div>
+      <div class="input-block">
+        <div class="input-label">ยอดรวมขายหน้าร้าน (ทั้งเงินสด + สแกน)</div>
+        <div class="input-group">
+          <input type="number" class="money-input" id="dineTotal" placeholder="0" min="0" step="1" inputmode="decimal">
+          <span class="baht">บาท</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="platform-icon icon-scan">📱</div>
+      <div class="input-block">
+        <div class="input-label">ยอดที่ลูกค้าสแกนจ่าย (QR/โอน)</div>
+        <div class="input-group">
+          <input type="number" class="money-input" id="scanTotal" placeholder="0" min="0" step="1" inputmode="decimal">
+          <span class="baht">บาท</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="platform-icon icon-scan" style="background: #8B5CF6;">คนละ<br>ครึ่ง</div>
+      <div class="input-block">
+        <div class="input-label">ยอดคนละครึ่ง/โครงการรัฐ (ถ้ามี)</div>
+        <div class="input-group">
+          <input type="number" class="money-input" id="govProgram" placeholder="0" min="0" step="1" inputmode="decimal">
+          <span class="baht">บาท</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight-card" style="background: linear-gradient(135deg, var(--income-green), #047857);">
+      <div class="caption">💵 เงินสดที่ต้องมีในลิ้นชัก</div>
+      <div class="amount" id="cashBox">0 ฿</div>
+      <div class="sub-note">= ยอดรวมหน้าร้าน − ยอดสแกน − ยอดคนละครึ่ง</div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-back" onclick="goToStep(1)">← ย้อน</button>
+      <button class="btn btn-primary" onclick="goToStep(3)">ถัดไป →</button>
+    </div>
+  </div>
+
+  <!-- ================ SECTION 3: รายจ่าย (ระบบใหม่) ================ -->
+  <div class="section" id="section-3">
+    <div class="section-title" style="color: var(--expense-red); border-bottom-color: var(--expense-red);">💸 ส่วนที่ 3: รายจ่ายประจำวัน</div>
+
+    <p class="help-text">
+      💡 แต่ละรายการเลือก <strong style="color: var(--income-green);">💰 จ่ายเลยวันนี้</strong> หรือ <strong style="color: var(--defer-orange);">⏳ ยกไปพรุ่งนี้</strong><br>
+      🏦 ถ้าเงินสดไม่พอจ่าย ให้เลือก "ยกไปพรุ่งนี้" → รายการจะถูกเก็บไว้ให้บันทึกจ่ายในวันถัดไป
+    </p>
+
+    <!-- ส่วน A: ยอดค้างจากเมื่อวาน -->
+    <div id="oldExpenseSection" style="display:none;">
+      <div class="expense-group-title old">📌 ยอดค้างจากเมื่อวาน (ต้องจัดการก่อน)</div>
+      <p class="help-text" style="background:#FEF3C7; border-left-color:var(--defer-orange);">
+        รายการที่ยกมาจากวันก่อน — กดปุ่มเพื่อเลือกว่า <strong>จ่ายวันนี้</strong> หรือ <strong>ยกต่อไปพรุ่งนี้อีก</strong>
+      </p>
+      <div id="oldExpenseList"></div>
+    </div>
+
+    <!-- ส่วน B: รายจ่ายใหม่วันนี้ -->
+    <div class="expense-group-title today">➕ รายจ่ายใหม่วันนี้</div>
+    <div id="expenseList"></div>
+
+    <button class="btn-add-expense" onclick="addExpense()">➕ เพิ่มรายการรายจ่าย</button>
+
+    <!-- สรุปแบบ Live -->
+    <div class="summary-row" style="background: var(--income-light); margin-top: 20px;">
+      <span class="label">✅ จ่ายจริงวันนี้ (หักจากเงินสด)</span>
+      <span class="value" id="paidTodayTotal" style="color: var(--income-green);">0 ฿</span>
+    </div>
+    <div class="summary-row" style="background: var(--defer-light);">
+      <span class="label">⏳ ยกไปจ่ายพรุ่งนี้ (ไม่หักวันนี้)</span>
+      <span class="value" id="deferredTotal" style="color: var(--defer-dark);">0 ฿</span>
+    </div>
+
+    <!-- คำเตือนเงินสดไม่พอ -->
+    <div class="cash-warning ok" id="cashCheckBox">
+      <div>💰 เงินสดในลิ้นชักหลังหักรายจ่าย:</div>
+      <div class="big-num" id="cashAfterExp">0 ฿</div>
+      <div id="cashCheckMsg">✓ เงินสดพอจ่ายรายจ่ายวันนี้</div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-back" onclick="goToStep(2)">← ย้อน</button>
+      <button class="btn btn-primary" onclick="goToStep(4)">ถัดไป →</button>
+    </div>
+  </div>
+
+  <!-- ================ SECTION 4: สรุปยอด ================ -->
+  <div class="section" id="section-4">
+    <div class="section-title">📊 ส่วนที่ 4: สรุปยอดประจำวัน</div>
+
+    <div class="summary-row" style="background: var(--income-light);">
+      <span class="label">💚 ยอดสุทธิ Delivery</span>
+      <span class="value" id="s-delivery" style="color: var(--income-green);">0 ฿</span>
+    </div>
+    <div class="summary-row" style="background: var(--income-light);">
+      <span class="label">💚 ยอดหน้าร้าน (รวมสแกน)</span>
+      <span class="value" id="s-dine" style="color: var(--income-green);">0 ฿</span>
+    </div>
+    <div class="summary-row" style="background: var(--income-light);">
+      <span class="label">💚 รายรับรวม</span>
+      <span class="value" id="s-revenue" style="color: var(--income-green); font-size: 24px;">0 ฿</span>
+    </div>
+
+    <div class="summary-row" style="background: var(--expense-light);">
+      <span class="label">💔 จ่ายจริงวันนี้ (รวมค้างเก่า)</span>
+      <span class="value" id="s-expensePaid" style="color: var(--expense-red);">0 ฿</span>
+    </div>
+
+    <div class="defer-card" id="deferCardBox" style="display:none;">
+      <div class="caption">⏳ ยกไปจ่ายพรุ่งนี้</div>
+      <div class="amount" id="s-expenseDefer">0 ฿</div>
+      <div class="sub-note">รายการนี้จะแสดงในหน้าบันทึกของวันถัดไปอัตโนมัติ</div>
+    </div>
+
+    <div class="highlight-card">
+      <div class="caption">📦 เงินสดที่ต้องส่งคืนเจ้าของ</div>
+      <div class="amount" id="cashToOwner">0 ฿</div>
+      <div class="sub-note">= เงินสดในลิ้นชัก − รายจ่ายที่จ่ายจริงวันนี้</div>
+    </div>
+
+    <div class="profit-card">
+      <div class="caption">✨ กำไรสุทธิประจำวัน</div>
+      <div class="amount" id="netProfit">0 ฿</div>
+      <div class="sub-note" style="font-size:14px;opacity:0.85;">= รายรับรวม − รายจ่ายจริงวันนี้ (ไม่นับยอดค้างที่ยกไปพรุ่งนี้)</div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-back" onclick="goToStep(3)">← ย้อน</button>
+      <button class="btn btn-success" onclick="openConfirm()">📤 ส่งข้อมูล</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   CONFIG: ตั้งค่าระบบ
+   ============================================================ */
+const CONFIG = {
+  // ใส่ URL Web app ของ Google Apps Script ที่ Deploy แล้ว
+  // ตัวอย่าง: 'https://script.google.com/macros/s/XXXXXXXX/exec'
+  GOOGLE_SHEETS_URL: 'https://script.google.com/macros/s/AKfycbz-n0TWDxwOb3oY-Ta__Rt1cupBwbhNY6L6L6kJo3s5ORW2P4IDkIZqk5OgCL6Tb8aBdw/exec',  // <<< กรอก URL ตรงนี้
+
+  // GP Rate (%) - ค่า DEFAULT (ใช้ถ้าโหลดจาก Sheet ไม่ได้)
+  // หลังบ้านสามารถแก้รายสาขาผ่าน Admin Panel
+  GP_RATES_DEFAULT: {
+    grab: 32, lineman: 32, shopee: 32,
+    robin: 30, other: 30
+  },
+  GP_CACHE_TTL_MS: 60 * 60 * 1000  // 1 ชั่วโมง
+};
+
+// อ่าน URL จาก localStorage ถ้า Admin Panel เคยตั้งไว้
+if (!CONFIG.GOOGLE_SHEETS_URL) {
+  CONFIG.GOOGLE_SHEETS_URL = localStorage.getItem('lamduan_admin_apiUrl') || '';
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let state = {
+  branch: null,
+  currentStep: 1,
+  oldExpenses: [],  // รายการค้างจากเมื่อวาน [{note, amount, dateIncurred, willPay}]
+  gpRates: { ...CONFIG.GP_RATES_DEFAULT },  // GP Rate ปัจจุบันของสาขาที่เลือก
+  cashAlertDismissed: false  // ผู้ใช้กดปิด popup เตือนเงินสดแล้วหรือยัง (กันสแปม)
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date();
+  const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const dateStr = `📅 ${today.getDate()} ${thaiMonths[today.getMonth()]} ${today.getFullYear() + 543}`;
+  document.getElementById('dateDisplay').textContent = dateStr;
+
+  document.querySelectorAll('.delivery-input').forEach(input => {
+    input.addEventListener('input', onDeliveryInput);
+  });
+
+  ['dineTotal', 'scanTotal', 'govProgram'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      updateCashBox();
+      updateCashCheck();
+    });
+  });
+
+  addExpense();
+});
+
+/* ============================================================
+   เลือกสาขา + โหลดรายจ่ายค้าง
+   ============================================================ */
+function selectBranch(name) {
+  state.branch = name;
+  document.getElementById('branchLabel').textContent = '📍 สาขา ' + name;
+  document.getElementById('branchModal').classList.add('hidden');
+
+  // โหลดรายจ่ายค้างจาก localStorage ของสาขานี้
+  loadOldExpenses(name);
+
+  // โหลด GP Rate ของสาขานี้จาก Sheet (มี cache)
+  loadGpRatesForBranch(name);
+
+  showToast('เลือกสาขา: ' + name, true);
+}
+
+/* ============================================================
+   โหลด GP Rate รายสาขา (ดึงจาก Apps Script + Cache)
+   ============================================================ */
+function loadGpRatesForBranch(branch) {
+  // 1. ลองอ่าน cache ก่อน
+  const cacheKey = 'gp_cache_' + branch;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      const obj = JSON.parse(cached);
+      if (obj.timestamp && (Date.now() - obj.timestamp) < CONFIG.GP_CACHE_TTL_MS) {
+        applyGpRates(obj.rates);
+        // Background refresh ในเงียบๆ
+        if (CONFIG.GOOGLE_SHEETS_URL) fetchGpFromServer(branch, true);
+        return;
+      }
+    } catch(e) {}
+  }
+  // 2. ถ้าไม่มี cache → ใช้ default ก่อน + ดึงจาก server
+  applyGpRates(CONFIG.GP_RATES_DEFAULT);
+  if (CONFIG.GOOGLE_SHEETS_URL) {
+    fetchGpFromServer(branch, false);
+  }
+}
+
+function fetchGpFromServer(branch, silent) {
+  const url = CONFIG.GOOGLE_SHEETS_URL + '?action=getGpRates&branch=' + encodeURIComponent(branch);
+  jsonpRequest(url, (data) => {
+    if (data && data.status === 'ok' && data.rates) {
+      applyGpRates(data.rates);
+      // Cache
+      localStorage.setItem('gp_cache_' + branch, JSON.stringify({
+        rates: data.rates,
+        timestamp: Date.now()
+      }));
+      if (!silent) showToast('✅ ดึง GP Rate ของสาขา ' + branch + ' จาก Sheet แล้ว', true);
+    }
+  }, () => {
+    if (!silent) showToast('⚠️ โหลด GP จาก Sheet ไม่สำเร็จ ใช้ค่า cache/default');
+  });
+}
+
+/* ============================================================
+   ใช้ GP Rate กับ UI
+   ============================================================ */
+function applyGpRates(rates) {
+  state.gpRates = { ...CONFIG.GP_RATES_DEFAULT, ...rates };
+
+  // อัพเดต label และ data-rate ของแต่ละช่อง Delivery
+  const platformLabels = {
+    grab: 'Grab Food',
+    lineman: 'LINE MAN',
+    shopee: 'Shopee Food',
+    robin: 'Robinhood',
+    other: 'แอพอื่นๆ'
+  };
+
+  Object.keys(platformLabels).forEach(p => {
+    const input = document.getElementById(p);
+    if (!input) return;
+    const gp = Number(state.gpRates[p]) || CONFIG.GP_RATES_DEFAULT[p];
+    const rate = (100 - gp) / 100;
+    input.dataset.rate = rate;
+    // อัพเดต label
+    const label = input.closest('.input-block').querySelector('.input-label');
+    if (label) label.textContent = `${platformLabels[p]} (หัก ${gp}%)`;
+    // คำนวณใหม่
+    const gross = parseFloat(input.value) || 0;
+    const net = gross * rate;
+    const netSpan = document.querySelector('#' + p + '-net span');
+    if (netSpan) netSpan.textContent = formatMoney(net) + ' ฿';
+  });
+  updateDeliveryTotal();
+}
+
+/* ============================================================
+   JSONP Request (สำหรับ GET cross-origin จาก Apps Script)
+   ============================================================ */
+function jsonpRequest(url, onSuccess, onError) {
+  const callbackName = 'lcb_' + Date.now() + Math.random().toString(36).slice(2, 8);
+  const sep = url.includes('?') ? '&' : '?';
+  const fullUrl = url + sep + 'callback=' + callbackName;
+  const timeoutId = setTimeout(() => {
+    cleanup();
+    if (onError) onError(new Error('timeout'));
+  }, 12000);
+  window[callbackName] = (data) => {
+    clearTimeout(timeoutId);
+    cleanup();
+    if (onSuccess) onSuccess(data);
+  };
+  const script = document.createElement('script');
+  script.src = fullUrl;
+  script.onerror = () => {
+    clearTimeout(timeoutId);
+    cleanup();
+    if (onError) onError(new Error('script error'));
+  };
+  document.head.appendChild(script);
+  function cleanup() {
+    delete window[callbackName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+  }
+}
+
+function loadOldExpenses(branch) {
+  const key = 'deferred_' + branch;
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    state.oldExpenses = [];
+    document.getElementById('oldExpenseSection').style.display = 'none';
+    return;
+  }
+  try {
+    const items = JSON.parse(raw);
+    if (!Array.isArray(items) || items.length === 0) {
+      state.oldExpenses = [];
+      document.getElementById('oldExpenseSection').style.display = 'none';
+      return;
+    }
+    state.oldExpenses = items.map(x => ({ ...x, willPay: true })); // default: จ่ายวันนี้
+    renderOldExpenses();
+    document.getElementById('oldExpenseSection').style.display = 'block';
+    showToast('📌 พบยอดค้างจากเมื่อวาน ' + items.length + ' รายการ', true);
+  } catch(e) {
+    state.oldExpenses = [];
+  }
+}
+
+function renderOldExpenses() {
+  const container = document.getElementById('oldExpenseList');
+  container.innerHTML = '';
+  state.oldExpenses.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'old-expense-card' + (item.willPay ? ' paying' : '');
+    card.innerHTML = `
+      <div class="old-expense-info">
+        <strong>${escapeHtml(item.note)}</strong>
+        <small>เกิดเมื่อ ${item.dateIncurred || '-'}</small>
+        <div class="amount">${formatMoney(item.amount)} ฿</div>
+      </div>
+      <div class="status-toggle" style="width:220px;">
+        <button class="status-btn ${item.willPay ? 'active-paid' : ''}" onclick="toggleOldExpense(${idx}, true)">💰 จ่ายวันนี้</button>
+        <button class="status-btn ${!item.willPay ? 'active-defer' : ''}" onclick="toggleOldExpense(${idx}, false)">⏳ ยกต่อ</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleOldExpense(idx, willPay) {
+  state.oldExpenses[idx].willPay = willPay;
+  renderOldExpenses();
+  updateExpenseTotal();
+  updateCashCheck();
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function goToStep(step) {
+  if (!state.branch) {
+    showToast('กรุณาเลือกสาขาก่อน');
+    document.getElementById('branchModal').classList.remove('hidden');
+    return;
+  }
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + step).classList.add('active');
+  document.querySelectorAll('.progress .step').forEach((s, idx) => {
+    s.classList.remove('active', 'done');
+    if (idx + 1 < step) s.classList.add('done');
+    else if (idx + 1 === step) s.classList.add('active');
+  });
+  state.currentStep = step;
+  if (step === 3) updateCashCheck();
+  if (step === 4) updateSummary();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+/* ============================================================
+   Delivery
+   ============================================================ */
+function onDeliveryInput(e) {
+  const input = e.target;
+  const gross = parseFloat(input.value) || 0;
+  const rate = parseFloat(input.dataset.rate);
+  const net = gross * rate;
+  document.querySelector('#' + input.id + '-net span').textContent = formatMoney(net) + ' ฿';
+  updateDeliveryTotal();
+}
+
+function updateDeliveryTotal() {
+  let total = 0;
+  document.querySelectorAll('.delivery-input').forEach(input => {
+    total += (parseFloat(input.value) || 0) * parseFloat(input.dataset.rate);
+  });
+  document.getElementById('deliveryTotal').textContent = formatMoney(total) + ' ฿';
+  return total;
+}
+
+/* ============================================================
+   เงินสดในลิ้นชัก
+   ============================================================ */
+function updateCashBox() {
+  const dine = parseFloat(document.getElementById('dineTotal').value) || 0;
+  const scan = parseFloat(document.getElementById('scanTotal').value) || 0;
+  const gov  = parseFloat(document.getElementById('govProgram').value) || 0;
+  const cash = Math.max(0, dine - scan - gov);
+  document.getElementById('cashBox').textContent = formatMoney(cash) + ' ฿';
+  return cash;
+}
+
+/* ============================================================
+   รายจ่ายใหม่ - ระบบ Toggle สถานะ
+   ============================================================ */
+function addExpense() {
+  const id = 'exp-' + Date.now() + Math.random().toString(36).slice(2,6);
+  const container = document.getElementById('expenseList');
+  const card = document.createElement('div');
+  card.className = 'expense-card paid';
+  card.dataset.id = id;
+  card.dataset.status = 'paid'; // default: จ่ายเลยวันนี้
+  card.innerHTML = `
+    <div class="expense-row-inputs">
+      <input type="text" placeholder="รายการ เช่น ค่าของสด" class="exp-note">
+      <input type="number" placeholder="0" min="0" step="1" inputmode="decimal" class="exp-amount">
+      <button class="btn-remove" onclick="removeExpense('${id}')" aria-label="ลบ">✕</button>
+    </div>
+    <div class="status-toggle">
+      <button class="status-btn active-paid" onclick="setExpenseStatus('${id}','paid')">💰 จ่ายเลยวันนี้</button>
+      <button class="status-btn" onclick="setExpenseStatus('${id}','defer')">⏳ ยกไปพรุ่งนี้</button>
+    </div>
+  `;
+  container.appendChild(card);
+  card.querySelector('.exp-amount').addEventListener('input', () => {
+    updateExpenseTotal();
+    updateCashCheck();
+  });
+}
+
+function setExpenseStatus(id, status) {
+  const card = document.querySelector(`[data-id="${id}"]`);
+  if (!card) return;
+  card.dataset.status = status;
+  card.classList.remove('paid', 'defer');
+  card.classList.add(status);
+  const btns = card.querySelectorAll('.status-btn');
+  btns.forEach(b => b.classList.remove('active-paid', 'active-defer'));
+  if (status === 'paid') btns[0].classList.add('active-paid');
+  else btns[1].classList.add('active-defer');
+  updateExpenseTotal();
+  updateCashCheck();
+}
+
+function removeExpense(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) el.remove();
+  updateExpenseTotal();
+  updateCashCheck();
+}
+
+function updateExpenseTotal() {
+  let paid = 0, defer = 0;
+  // รายจ่ายใหม่วันนี้
+  document.querySelectorAll('#expenseList .expense-card').forEach(card => {
+    const amt = parseFloat(card.querySelector('.exp-amount').value) || 0;
+    if (card.dataset.status === 'paid') paid += amt;
+    else defer += amt;
+  });
+  // รายจ่ายค้างเก่าที่ตัดสินใจจ่ายวันนี้
+  let oldPaid = 0, oldDefer = 0;
+  state.oldExpenses.forEach(x => {
+    if (x.willPay) oldPaid += x.amount;
+    else oldDefer += x.amount;
+  });
+  const totalPaid = paid + oldPaid;
+  const totalDefer = defer + oldDefer;
+  document.getElementById('paidTodayTotal').textContent = formatMoney(totalPaid) + ' ฿';
+  document.getElementById('deferredTotal').textContent = formatMoney(totalDefer) + ' ฿';
+  return { paid: totalPaid, defer: totalDefer, newPaid: paid, newDefer: defer, oldPaid, oldDefer };
+}
+
+/* ============================================================
+   ระบบเตือนเงินสดไม่พอ
+   ============================================================ */
+function updateCashCheck() {
+  const cash = updateCashBox();
+  const exp = updateExpenseTotal();
+  const remaining = cash - exp.paid;
+  document.getElementById('cashAfterExp').textContent = formatMoney(remaining) + ' ฿';
+
+  const box = document.getElementById('cashCheckBox');
+  const msg = document.getElementById('cashCheckMsg');
+  box.classList.remove('ok', 'alert');
+
+  if (remaining >= 0) {
+    box.classList.add('ok');
+    msg.innerHTML = '✓ เงินสดพอจ่ายรายจ่ายวันนี้';
+    // Reset flag เพื่อให้ popup โผล่ได้อีกครั้งถ้าเงินไม่พอใหม่
+    state.cashAlertDismissed = false;
+  } else {
+    const shortAmount = Math.abs(remaining);
+    box.classList.add('alert');
+    msg.innerHTML = `⚠️ เงินสดไม่พอ <strong>${formatMoney(shortAmount)} ฿</strong><br>แนะนำ: กด "⏳ ยกไปพรุ่งนี้" สำหรับบางรายการ`;
+    // เปิด popup กระพริบ (ถ้ายังไม่ได้กดปิด)
+    if (!state.cashAlertDismissed && state.currentStep === 3) {
+      showCashAlert(shortAmount);
+    } else {
+      // ถ้า popup เปิดอยู่ → อัพเดตยอด real-time
+      updateCashAlertAmount(shortAmount);
+    }
+  }
+}
+
+/* ============================================================
+   Popup เตือนเงินสดไม่พอ (กระพริบสีแดง)
+   ============================================================ */
+function showCashAlert(shortAmount) {
+  const modal = document.getElementById('cashAlertModal');
+  if (modal.classList.contains('hidden')) {
+    updateCashAlertAmount(shortAmount);
+    modal.classList.remove('hidden');
+  }
+}
+
+function updateCashAlertAmount(shortAmount) {
+  const el = document.getElementById('cashAlertAmount');
+  if (el) el.textContent = `เงินสดไม่พอ ${formatMoney(shortAmount)} ฿`;
+}
+
+function closeCashAlert() {
+  document.getElementById('cashAlertModal').classList.add('hidden');
+  state.cashAlertDismissed = true;
+}
+
+/* ============================================================
+   เก็บรายการรายจ่ายปัจจุบัน
+   ============================================================ */
+function collectExpenses() {
+  const expensesPaid = [];      // รายจ่ายใหม่วันนี้ที่จ่ายเลย
+  const expensesDeferred = [];  // รายจ่ายใหม่วันนี้ที่ยกไปพรุ่งนี้
+  const expensesOldPaid = [];   // รายจ่ายค้างเก่าที่จ่ายวันนี้
+  const expensesOldStillDeferred = []; // รายจ่ายค้างเก่าที่ยังยกต่อ
+
+  document.querySelectorAll('#expenseList .expense-card').forEach(card => {
+    const note = card.querySelector('.exp-note').value.trim();
+    const amount = parseFloat(card.querySelector('.exp-amount').value) || 0;
+    if (amount <= 0) return;
+    const item = { note: note || '(ไม่ระบุ)', amount };
+    if (card.dataset.status === 'paid') expensesPaid.push(item);
+    else expensesDeferred.push(item);
+  });
+
+  state.oldExpenses.forEach(x => {
+    const item = { note: x.note, amount: x.amount, dateIncurred: x.dateIncurred };
+    if (x.willPay) expensesOldPaid.push(item);
+    else expensesOldStillDeferred.push(item);
+  });
+
+  return { expensesPaid, expensesDeferred, expensesOldPaid, expensesOldStillDeferred };
+}
+
+/* ============================================================
+   สรุปยอด
+   ============================================================ */
+function updateSummary() {
+  const delivery = updateDeliveryTotal();
+  const dine = parseFloat(document.getElementById('dineTotal').value) || 0;
+  const cash = updateCashBox();
+  const exp = updateExpenseTotal();
+
+  const revenue = delivery + dine;
+  const cashToOwner = cash - exp.paid;
+  const netProfit = revenue - exp.paid;
+
+  document.getElementById('s-delivery').textContent = formatMoney(delivery) + ' ฿';
+  document.getElementById('s-dine').textContent = formatMoney(dine) + ' ฿';
+  document.getElementById('s-revenue').textContent = formatMoney(revenue) + ' ฿';
+  document.getElementById('s-expensePaid').textContent = formatMoney(exp.paid) + ' ฿';
+  document.getElementById('cashToOwner').textContent = formatMoney(cashToOwner) + ' ฿';
+  document.getElementById('netProfit').textContent = formatMoney(netProfit) + ' ฿';
+
+  // แสดงการ์ด defer ถ้ามี
+  const deferBox = document.getElementById('deferCardBox');
+  if (exp.defer > 0) {
+    deferBox.style.display = 'block';
+    document.getElementById('s-expenseDefer').textContent = formatMoney(exp.defer) + ' ฿';
+  } else {
+    deferBox.style.display = 'none';
+  }
+
+  // เตือนเงินสดส่งคืนติดลบ
+  const cashCard = document.getElementById('cashToOwner').parentElement;
+  if (cashToOwner < 0) {
+    cashCard.style.background = 'linear-gradient(135deg, var(--expense-red), #991B1B)';
+  } else {
+    cashCard.style.background = 'linear-gradient(135deg, var(--cash-blue), #1D4ED8)';
+  }
+}
+
+/* ============================================================
+   Confirm Modal
+   ============================================================ */
+function openConfirm() {
+  const delivery = updateDeliveryTotal();
+  const dine = parseFloat(document.getElementById('dineTotal').value) || 0;
+  const scan = parseFloat(document.getElementById('scanTotal').value) || 0;
+
+  if (delivery === 0 && dine === 0) {
+    showToast('ต้องมียอดขายอย่างน้อย 1 ช่องทาง');
+    return;
+  }
+  if (scan > dine) {
+    showToast('ยอดสแกนต้องไม่มากกว่ายอดรวมหน้าร้าน');
+    return;
+  }
+
+  const data = buildPayload();
+  let html = `<strong>📍 สาขา:</strong> ${data.branch}<br>`;
+  html += `<strong>📅 วันที่:</strong> ${data.date}<br><br>`;
+  html += `<strong>🛵 Delivery (สุทธิ):</strong> ${formatMoney(data.deliveryNet)} ฿<br>`;
+  html += `<strong>🏪 หน้าร้าน:</strong> ${formatMoney(data.dineTotal)} ฿ (เงินสด ${formatMoney(data.cashBox)} ฿, สแกน ${formatMoney(data.scanTotal)} ฿)<br><br>`;
+
+  if ((data.expensesOldPaid || []).length) {
+    html += `<strong>📌 จ่ายค้างเก่า:</strong> ${formatMoney(data.expenseOldPaidTotal)} ฿<br>`;
+    data.expensesOldPaid.forEach(e => html += `&nbsp;&nbsp;✓ ${e.note}: ${formatMoney(e.amount)} ฿<br>`);
+  }
+  if ((data.expensesPaid || []).length) {
+    html += `<strong>💸 จ่ายใหม่วันนี้:</strong> ${formatMoney(data.expensesPaid.reduce((s,x)=>s+x.amount,0))} ฿<br>`;
+    data.expensesPaid.forEach(e => html += `&nbsp;&nbsp;• ${e.note}: ${formatMoney(e.amount)} ฿<br>`);
+  }
+  if ((data.expensesDeferred || []).length) {
+    html += `<br><strong style="color: var(--defer-dark);">⏳ ยกไปพรุ่งนี้:</strong> ${formatMoney(data.expenseDeferredTotal)} ฿<br>`;
+    data.expensesDeferred.forEach(e => html += `&nbsp;&nbsp;• ${e.note}: ${formatMoney(e.amount)} ฿<br>`);
+  }
+
+  html += `<br><strong style="color: var(--cash-blue); font-size: 22px;">📦 เงินส่งคืนเจ้าของ: ${formatMoney(data.cashToOwner)} ฿</strong><br>`;
+  html += `<strong style="color: var(--income-green); font-size: 22px;">✨ กำไรสุทธิ: ${formatMoney(data.netProfit)} ฿</strong>`;
+
+  document.getElementById('confirmSummary').innerHTML = html;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
+
+/* ============================================================
+   สร้าง Payload ส่งไป Apps Script
+   ============================================================ */
+function buildPayload() {
+  const getNet = id => {
+    const input = document.getElementById(id);
+    const gross = parseFloat(input.value) || 0;
+    const rate = parseFloat(input.dataset.rate);
+    return { gross, net: gross * rate };
+  };
+
+  const grab = getNet('grab'), lineman = getNet('lineman'), shopee = getNet('shopee');
+  const robin = getNet('robin'), other = getNet('other');
+  // foodpanda ถูกยกเลิกการเข้าร่วม - คง field ไว้เพื่อ backward compatibility กับ Sheet
+  const panda = { gross: 0, net: 0 };
+
+  const deliveryGross = grab.gross + lineman.gross + shopee.gross + robin.gross + other.gross;
+  const deliveryNet = grab.net + lineman.net + shopee.net + robin.net + other.net;
+
+  const dineTotal = parseFloat(document.getElementById('dineTotal').value) || 0;
+  const scanTotal = parseFloat(document.getElementById('scanTotal').value) || 0;
+  const govProgram = parseFloat(document.getElementById('govProgram').value) || 0;
+  const cashBox = Math.max(0, dineTotal - scanTotal - govProgram);
+
+  const ex = collectExpenses();
+  const paidNew = ex.expensesPaid.reduce((s,x)=>s+x.amount, 0);
+  const deferNew = ex.expensesDeferred.reduce((s,x)=>s+x.amount, 0);
+  const oldPaid = ex.expensesOldPaid.reduce((s,x)=>s+x.amount, 0);
+  const oldStillDefer = ex.expensesOldStillDeferred.reduce((s,x)=>s+x.amount, 0);
+
+  const expensePaidTotal = paidNew + oldPaid;  // จ่ายจริงวันนี้
+  const expenseDeferredTotal = deferNew + oldStillDefer;  // รวมยกไปพรุ่งนี้
+
+  const revenue = deliveryNet + dineTotal;
+  const cashToOwner = cashBox - expensePaidTotal;
+  const netProfit = revenue - expensePaidTotal;
+
+  const now = new Date();
+  const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const dateStr = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+
+  return {
+    branch: state.branch,
+    date: dateStr,
+    timestamp: now.toISOString(),
+    grabGross: grab.gross,       grabNet: grab.net,
+    linemanGross: lineman.gross, linemanNet: lineman.net,
+    shopeeGross: shopee.gross,   shopeeNet: shopee.net,
+    pandaGross: panda.gross,     pandaNet: panda.net,
+    robinGross: robin.gross,     robinNet: robin.net,
+    otherGross: other.gross,     otherNet: other.net,
+    deliveryGross, deliveryNet,
+    dineTotal, scanTotal, govProgram, cashBox,
+    // รายจ่าย
+    expensesPaid: ex.expensesPaid,
+    expensesDeferred: [...ex.expensesDeferred, ...ex.expensesOldStillDeferred],
+    expensesOldPaid: ex.expensesOldPaid,
+    expensePaidTotal, expenseDeferredTotal,
+    expenseOldPaidTotal: oldPaid,
+    // สรุป
+    revenue, cashToOwner, netProfit,
+    // GP Snapshot - บันทึก % ที่ใช้ ณ เวลานี้ (เผื่อย้อนตรวจสอบ)
+    gpSnapshot: { ...state.gpRates }
+  };
+}
+
+/* ============================================================
+   ส่งข้อมูลไป Google Apps Script
+   ============================================================ */
+async function submitData() {
+  const data = buildPayload();
+  closeConfirm();
+
+  // บันทึกรายการ "ยกไปพรุ่งนี้" ลง localStorage
+  try { saveDeferredToStorage(data); } catch(e) { console.warn('save deferred error', e); }
+
+  showToast('⏳ กำลังส่งข้อมูล...', true);
+
+  // ถ้ามี URL → ส่งจริง / ถ้าไม่มี URL → Demo mode
+  if (CONFIG.GOOGLE_SHEETS_URL) {
+    try {
+      await fetch(CONFIG.GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(data)
+      });
+    } catch (err) {
+      // fetch ล้มเหลว → log แต่ยังแสดงสรุป
+      console.error('Send error:', err);
+      showToast('⚠️ ส่งไป Sheet ไม่สำเร็จ แต่ดูสรุปได้: ' + err.message);
+    }
+  } else {
+    // Demo Mode - แค่ log ไม่ต้องส่งจริง
+    console.log('📤 Demo Mode - ยังไม่ได้ตั้ง GOOGLE_SHEETS_URL\nPayload:', data);
+  }
+
+  // 🟢 แสดง Popup สรุปยอดขายเสมอ (ไม่ว่าจะเป็น Demo หรือ Production)
+  showToast('✅ ส่งข้อมูลสำเร็จ!', true);
+  showSummaryModal(data);
+}
+
+/* ============================================================
+   Popup สรุปยอดขาย (พร้อมบันทึกรูป + แชร์)
+   ============================================================ */
+function showSummaryModal(data) {
+  // วันที่ + เวลา
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0') + ':' +
+                  String(now.getMinutes()).padStart(2,'0') + ':' +
+                  String(now.getSeconds()).padStart(2,'0');
+
+  document.getElementById('rcpBranch').textContent = data.branch;
+  document.getElementById('rcpDate').textContent = data.date;
+  document.getElementById('rcpTime').textContent = timeStr + ' น.';
+
+  // Delivery breakdown
+  const platforms = [
+    { id: 'grab', label: 'Grab Food', net: data.grabNet, gross: data.grabGross },
+    { id: 'lineman', label: 'LINE MAN', net: data.linemanNet, gross: data.linemanGross },
+    { id: 'shopee', label: 'Shopee Food', net: data.shopeeNet, gross: data.shopeeGross },
+    { id: 'robin', label: 'Robinhood', net: data.robinNet, gross: data.robinGross },
+    { id: 'other', label: 'แอพอื่นๆ', net: data.otherNet, gross: data.otherGross }
+  ];
+  let deliveryHtml = '';
+  platforms.forEach(p => {
+    if (p.gross > 0) {
+      deliveryHtml += `<div class="receipt-line"><span>&nbsp;&nbsp;• ${p.label}</span><strong>${formatMoney(p.net)} ฿</strong></div>`;
+    }
+  });
+  if (!deliveryHtml) deliveryHtml = '<div class="receipt-line"><span>&nbsp;&nbsp;ไม่มียอด Delivery</span><strong>0 ฿</strong></div>';
+  document.getElementById('rcpDelivery').innerHTML = deliveryHtml;
+  document.getElementById('rcpDeliveryTotal').textContent = formatMoney(data.deliveryNet) + ' ฿';
+
+  // หน้าร้าน
+  document.getElementById('rcpDineTotal').textContent = formatMoney(data.dineTotal) + ' ฿';
+  document.getElementById('rcpCash').textContent = formatMoney(data.cashBox) + ' ฿';
+  document.getElementById('rcpScan').textContent = formatMoney(data.scanTotal) + ' ฿';
+  document.getElementById('rcpGov').textContent = formatMoney(data.govProgram) + ' ฿';
+
+  // รายจ่ายจริงวันนี้ (จ่ายใหม่ + ค้างเก่าจ่าย)
+  const expSection = document.getElementById('rcpExpenseSection');
+  const allPaid = [...(data.expensesOldPaid || []).map(e => ({...e, oldFlag: true})),
+                   ...(data.expensesPaid || [])];
+  if (allPaid.length > 0) {
+    let expHtml = '';
+    allPaid.forEach(e => {
+      const tag = e.oldFlag ? ' <span style="color:#D97706;font-size:12px;">(ค้างเก่า)</span>' : '';
+      expHtml += `<div class="receipt-line"><span>&nbsp;&nbsp;• ${escapeHtml(e.note)}${tag}</span><strong>${formatMoney(e.amount)} ฿</strong></div>`;
+    });
+    document.getElementById('rcpExpenseList').innerHTML = expHtml;
+    document.getElementById('rcpExpenseTotal').textContent = formatMoney(data.expensePaidTotal) + ' ฿';
+    expSection.style.display = 'block';
+  } else {
+    expSection.style.display = 'none';
+  }
+
+  // ยกไปพรุ่งนี้
+  const deferSection = document.getElementById('rcpDeferSection');
+  if (data.expensesDeferred && data.expensesDeferred.length > 0) {
+    let dHtml = '';
+    data.expensesDeferred.forEach(e => {
+      dHtml += `<div class="receipt-line"><span>&nbsp;&nbsp;• ${escapeHtml(e.note)}</span><strong>${formatMoney(e.amount)} ฿</strong></div>`;
+    });
+    document.getElementById('rcpDeferList').innerHTML = dHtml;
+    document.getElementById('rcpDeferTotal').textContent = formatMoney(data.expenseDeferredTotal) + ' ฿';
+    deferSection.style.display = 'block';
+  } else {
+    deferSection.style.display = 'none';
+  }
+
+  // สรุปยอด
+  document.getElementById('rcpRevenue').textContent = formatMoney(data.revenue) + ' ฿';
+  document.getElementById('rcpExpenseSum').textContent = formatMoney(data.expensePaidTotal) + ' ฿';
+  document.getElementById('rcpCashOwner').textContent = formatMoney(data.cashToOwner) + ' ฿';
+  document.getElementById('rcpProfit').textContent = formatMoney(data.netProfit) + ' ฿';
+
+  document.getElementById('summaryModal').classList.remove('hidden');
+}
+
+/* ============================================================
+   บันทึกเป็นรูป (ใช้ html2canvas)
+   ============================================================ */
+async function saveSummaryAsImage() {
+  if (typeof html2canvas === 'undefined') {
+    alert('⚠️ Library html2canvas ยังโหลดไม่เสร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตและลองใหม่');
+    return;
+  }
+  showToast('⏳ กำลังสร้างรูป...', true);
+  try {
+    const element = document.getElementById('receiptCard');
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      backgroundColor: '#FFFFFF',
+      useCORS: true,
+      logging: false
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    const branch = document.getElementById('rcpBranch').textContent;
+    const date = document.getElementById('rcpDate').textContent.replace(/\s+/g, '_');
+    const filename = `ลำดวน_${branch}_${date}.png`;
+    // Download
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✅ บันทึกรูปสำเร็จ: ' + filename, true);
+  } catch (err) {
+    console.error(err);
+    showToast('❌ บันทึกรูปไม่สำเร็จ: ' + err.message);
+  }
+}
+
+/* ============================================================
+   แชร์รูป (ใช้ Web Share API)
+   ============================================================ */
+async function shareSummary() {
+  if (typeof html2canvas === 'undefined') {
+    alert('⚠️ Library html2canvas ยังโหลดไม่เสร็จ');
+    return;
+  }
+  showToast('⏳ กำลังเตรียมแชร์...', true);
+  try {
+    const element = document.getElementById('receiptCard');
+    const canvas = await html2canvas(element, {
+      scale: 2, backgroundColor: '#FFFFFF', useCORS: true, logging: false
+    });
+    canvas.toBlob(async (blob) => {
+      const branch = document.getElementById('rcpBranch').textContent;
+      const date = document.getElementById('rcpDate').textContent;
+      const filename = `ลำดวน_${branch}_${date.replace(/\s+/g,'_')}.png`;
+      const file = new File([blob], filename, { type: 'image/png' });
+      const shareData = {
+        title: 'สรุปยอดขายข้าวซอยลำดวน',
+        text: `🍜 สรุปยอดสาขา ${branch}\n📅 ${date}`,
+        files: [file]
+      };
+      // Web Share API (มือถือ + iOS/Android)
+      if (navigator.canShare && navigator.canShare(shareData)) {
+        try {
+          await navigator.share(shareData);
+          showToast('✅ แชร์สำเร็จ', true);
+        } catch(e) {
+          if (e.name !== 'AbortError') showToast('❌ แชร์ไม่สำเร็จ: ' + e.message);
+        }
+      } else {
+        // Fallback: copy to clipboard if possible, else download
+        try {
+          if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            showToast('✅ คัดลอกรูปไปคลิปบอร์ดแล้ว (วางใน LINE/Messenger ได้เลย)', true);
+          } else {
+            throw new Error('no clipboard');
+          }
+        } catch(e) {
+          // Final fallback: download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('💾 อุปกรณ์นี้ไม่รองรับ Share — บันทึกเป็นรูปให้แทน', true);
+        }
+      }
+    }, 'image/png');
+  } catch (err) {
+    console.error(err);
+    showToast('❌ แชร์ไม่สำเร็จ: ' + err.message);
+  }
+}
+
+/* ============================================================
+   ปิด Popup + Reset Form
+   ============================================================ */
+function closeSummaryAndReset() {
+  document.getElementById('summaryModal').classList.add('hidden');
+  if (confirm('ต้องการเริ่มบันทึกรอบใหม่หรือไม่?')) resetForm();
+}
+
+/* ============================================================
+   จัดการ localStorage รายจ่ายค้าง
+   ============================================================ */
+function saveDeferredToStorage(data) {
+  const key = 'deferred_' + data.branch;
+  // รายการยกไปพรุ่งนี้ทั้งหมด = defer ใหม่ + old ที่ยังยกต่อ
+  const newDeferred = data.expensesDeferred.map(x => ({
+    note: x.note,
+    amount: x.amount,
+    dateIncurred: x.dateIncurred || data.date
+  }));
+  if (newDeferred.length > 0) {
+    localStorage.setItem(key, JSON.stringify(newDeferred));
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+/* ============================================================
+   Reset
+   ============================================================ */
+function resetForm() {
+  document.querySelectorAll('.money-input').forEach(i => i.value = '');
+  document.querySelectorAll('.auto-calc span').forEach(s => s.textContent = '0 ฿');
+  document.getElementById('expenseList').innerHTML = '';
+  addExpense();
+  // Reload old expenses (หลังส่งไปแล้วจะเหลือเฉพาะที่ยกต่อ)
+  loadOldExpenses(state.branch);
+  updateDeliveryTotal();
+  updateCashBox();
+  updateExpenseTotal();
+  updateCashCheck();
+  goToStep(1);
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function formatMoney(n) {
+  return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function showToast(msg, success = false) {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg;
+  t.className = 'toast show' + (success ? ' success' : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ป้องกันพิมพ์ตัวอักษรในช่องตัวเลข
+document.addEventListener('keypress', (e) => {
+  if (e.target.matches('input[type="number"]')) {
+    if (!/[0-9.]/.test(e.key)) e.preventDefault();
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚙️ Admin - ตั้งค่า GP | ข้าวซอยลำดวน</title>
+<style>
+:root {
+  --primary: #7C3AED;
+  --primary-dark: #5B21B6;
+  --accent: #D97706;
+  --success: #059669;
+  --success-light: #D1FAE5;
+  --danger: #DC2626;
+  --danger-light: #FEE2E2;
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --bg: #F9FAFB;
+  --border: #E5E7EB;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'Sarabun', 'Prompt', sans-serif;
+  font-size: 18px;
+  background: var(--bg);
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 24px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 20px rgba(124,58,237,0.3);
+}
+.header h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+.header .sub { font-size: 16px; opacity: 0.95; }
+.header .nav-link {
+  display: inline-block;
+  margin-top: 10px;
+  background: rgba(255,255,255,0.25);
+  padding: 6px 14px;
+  border-radius: 8px;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+}
+.header .nav-link:hover { background: rgba(255,255,255,0.4); }
+
+/* CARD */
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 18px;
+}
+.card-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* PIN GATE */
+.pin-gate {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.pin-gate.hidden { display: none; }
+.pin-box {
+  background: white;
+  padding: 32px 28px;
+  border-radius: 20px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+.pin-box h2 { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+.pin-box p { color: var(--text-muted); margin-bottom: 18px; font-size: 16px; }
+.pin-input {
+  font-size: 32px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 12px;
+  width: 100%;
+  padding: 18px;
+  border: 3px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  font-family: inherit;
+}
+.pin-input:focus { outline: none; border-color: var(--primary); }
+.pin-error { color: var(--danger); font-weight: 700; margin-bottom: 12px; min-height: 24px; }
+
+/* CONFIG WARN */
+.config-warn {
+  background: var(--warning-light);
+  border: 2px solid var(--warning);
+  color: #92400E;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+.config-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  margin-top: 8px;
+  font-family: inherit;
+}
+.config-input:focus { outline: none; border-color: var(--primary); }
+
+/* GP TABLE */
+.gp-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  margin-bottom: 16px;
+}
+.gp-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 900px;
+}
+.gp-table th, .gp-table td {
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.gp-table thead th {
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  position: sticky;
+  top: 0;
+}
+.gp-table thead th:first-child { background: var(--primary-dark); }
+.gp-table tbody tr:nth-child(even) { background: #FAFAFA; }
+.gp-table tbody tr:hover { background: #FEF3C7; }
+.branch-cell {
+  font-weight: 800;
+  background: var(--warning-light) !important;
+  color: var(--accent);
+  text-align: left;
+  padding-left: 16px;
+  min-width: 130px;
+}
+.platform-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: white;
+  font-weight: 700;
+}
+.pill-grab { background: #00B14F; }
+.pill-lineman { background: #06C755; }
+.pill-shopee { background: #EE4D2D; }
+.pill-panda { background: #D70F64; }
+.pill-robin { background: #7B2CBF; }
+.pill-other { background: #6B7280; }
+
+.gp-input {
+  width: 80px;
+  padding: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  -moz-appearance: textfield;
+}
+.gp-input::-webkit-outer-spin-button,
+.gp-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.gp-input:focus { outline: none; border-color: var(--primary); background: #FAF5FF; }
+.gp-input.changed { border-color: var(--warning); background: var(--warning-light); }
+
+.gp-suffix { font-size: 16px; color: var(--text-muted); margin-left: 4px; font-weight: 700; }
+.net-preview {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--success);
+  font-weight: 700;
+}
+
+/* PREVIEW SECTION */
+.preview-card {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  padding: 20px;
+  border-radius: 14px;
+  margin-top: 14px;
+}
+.preview-card h3 { font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 10px; }
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.preview-item {
+  background: white;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+}
+.preview-item .label { font-size: 13px; color: var(--text-muted); }
+.preview-item .value { font-size: 20px; font-weight: 800; color: var(--success); }
+
+.preview-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 18px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  margin-bottom: 10px;
+}
+
+/* BUTTONS */
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn {
+  padding: 14px 22px;
+  font-size: 17px;
+  font-weight: 800;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger-outline {
+  background: white;
+  color: var(--danger);
+  border: 2px solid var(--danger);
+}
+.btn-secondary { background: #E5E7EB; color: var(--text-main); }
+.btn-flex { flex: 1; min-width: 140px; }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--danger);
+  color: white;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 17px;
+  z-index: 200;
+  display: none;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+.toast.show { display: block; animation: pop 0.3s; }
+.toast.success { background: var(--success); }
+@keyframes pop {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* MODAL */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 150;
+  padding: 16px;
+}
+.modal-bg.hidden { display: none; }
+.modal {
+  background: white;
+  border-radius: 18px;
+  padding: 24px;
+  max-width: 540px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal h2 { color: var(--primary); margin-bottom: 12px; }
+.diff-line { padding: 6px 10px; margin-bottom: 4px; border-radius: 6px; font-size: 15px; }
+.diff-line.add { background: var(--success-light); color: var(--success); }
+.diff-line.remove { background: var(--danger-light); color: var(--danger); text-decoration: line-through; }
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .header h1 { font-size: 22px; }
+  .gp-input { width: 64px; padding: 8px; font-size: 16px; }
+  .gp-table th, .gp-table td { padding: 8px 4px; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ========== PIN GATE ========== -->
+<div class="pin-gate" id="pinGate">
+  <div class="pin-box">
+    <h2>🔐 Admin เท่านั้น</h2>
+    <p>กรุณาใส่ PIN 4 หลักเพื่อเข้าระบบหลังบ้าน</p>
+    <input type="password" maxlength="4" inputmode="numeric" class="pin-input" id="pinInput" placeholder="••••" autofocus>
+    <div class="pin-error" id="pinError"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="checkPin()">เข้าระบบ →</button>
+    <p style="margin-top:14px; font-size:13px;">PIN ตั้งต้น: <strong>1234</strong> (เปลี่ยนได้ใน Apps Script)</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ========== Confirm Modal ========== -->
+<div class="modal-bg hidden" id="confirmModal">
+  <div class="modal">
+    <h2>ยืนยันการเปลี่ยนแปลง</h2>
+    <p style="color: var(--text-muted); margin-bottom:14px;">รายการที่จะเปลี่ยน:</p>
+    <div id="diffList"></div>
+    <div class="btn-row" style="margin-top:18px;">
+      <button class="btn btn-secondary btn-flex" onclick="closeConfirm()">ยกเลิก</button>
+      <button class="btn btn-success btn-flex" onclick="doSave()">✓ ยืนยันบันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>⚙️ Admin Panel - ตั้งค่า GP</h1>
+    <div class="sub">ระบบหลังบ้าน ข้าวซอยลำดวนฟ้าฮ่าม | สำหรับเจ้าของกิจการ</div>
+    <a href="ระบบบันทึกยอดขาย_ข้าวซอยลำดวน.html" class="nav-link">← กลับหน้าบันทึกยอดขาย</a>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="card">
+    <div class="card-title">🔗 URL Apps Script</div>
+    <div class="config-warn" id="configWarn">
+      ⚠️ ยังไม่ได้ตั้งค่า URL Apps Script — กรุณาวาง URL ที่ Deploy แล้วในช่องด้านล่าง
+    </div>
+    <input type="url" id="apiUrl" class="config-input" placeholder="https://script.google.com/macros/s/.../exec">
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-primary" onclick="saveApiUrl()">💾 บันทึก URL</button>
+      <button class="btn btn-secondary" onclick="testConnection()">🔍 ทดสอบเชื่อมต่อ</button>
+    </div>
+  </div>
+
+  <!-- GP TABLE -->
+  <div class="card">
+    <div class="card-title">📊 เปอร์เซ็นต์ GP รายสาขา (% ที่ Platform หัก)</div>
+    <p style="color:var(--text-muted); font-size:15px; margin-bottom:14px;">
+      💡 ตัวเลข = % ที่ platform หัก เช่น <strong>32</strong> = หัก 32% ร้านได้ <strong>68%</strong> | ค่าที่แก้แล้วจะเป็นสีเหลืองจนกว่าจะกดบันทึก
+    </p>
+    <div id="loadingState" class="empty-state">
+      <div class="spinner"></div>
+      <p style="margin-top:12px;">กำลังโหลดข้อมูล GP...</p>
+    </div>
+    <div class="gp-table-wrap" id="tableWrap" style="display:none;">
+      <table class="gp-table">
+        <thead>
+          <tr>
+            <th>สาขา</th>
+            <th><span class="platform-pill pill-grab">Grab</span></th>
+            <th><span class="platform-pill pill-lineman">LINE MAN</span></th>
+            <th><span class="platform-pill pill-shopee">Shopee</span></th>
+            <th><span class="platform-pill pill-robin">Robinhood</span></th>
+            <th><span class="platform-pill pill-other">อื่นๆ</span></th>
+          </tr>
+        </thead>
+        <tbody id="gpTableBody"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-secondary" onclick="resetToDefault()">🔄 Reset เป็นค่ามาตรฐาน</button>
+      <button class="btn btn-primary" onclick="reloadFromServer()">🔁 โหลดใหม่จาก Sheet</button>
+      <button class="btn btn-success btn-flex" onclick="confirmSave()">💾 บันทึกการเปลี่ยนแปลง</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW CALCULATOR -->
+  <div class="card">
+    <div class="card-title">🧮 ทดลองคำนวณ (Preview)</div>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:10px;">
+      ลองใส่ยอดขาย Gross เพื่อดูว่าด้วย % ที่ตั้งไว้ ร้านจะได้สุทธิเท่าไรในแต่ละ platform
+    </p>
+    <input type="number" id="previewAmount" class="preview-input" placeholder="ลองใส่ยอดขาย เช่น 1000" oninput="updatePreview()">
+    <div id="previewArea"></div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <div class="card-title">📝 ประวัติการแก้ไขล่าสุด</div>
+    <p style="color:var(--text-muted); font-size:14px;">
+      ดูประวัติทั้งหมดได้ที่ Sheet "📝 ประวัติแก้ GP" ใน Google Sheet
+    </p>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   STATE & CONFIG
+   ============================================================ */
+const ADMIN_PIN_HINT = '1234'; // ใช้แสดงเท่านั้น (จริงเก็บที่ Apps Script)
+const STORAGE_KEY_URL = 'lamduan_admin_apiUrl';
+const STORAGE_KEY_PIN = 'lamduan_admin_pin';
+const BRANCHES = ['วิภาวดี', 'สาทร', 'บรรทัดทอง', 'ประดิพัทธ์'];
+const PLATFORMS = ['grab', 'lineman', 'shopee', 'robin', 'other'];
+const PLATFORM_LABELS = {
+  grab: 'Grab', lineman: 'LINE MAN', shopee: 'Shopee',
+  robin: 'Robinhood', other: 'อื่นๆ'
+};
+const DEFAULT_GP = { grab: 32, lineman: 32, shopee: 32, robin: 30, other: 30 };
+
+let state = {
+  apiUrl: localStorage.getItem(STORAGE_KEY_URL) || '',
+  pin: '',
+  serverData: {},  // { branch: { platform: % } } จาก Server
+  localData: {},   // { branch: { platform: % } } กำลังแก้
+};
+
+/* ============================================================
+   PIN
+   ============================================================ */
+function checkPin() {
+  const input = document.getElementById('pinInput').value.trim();
+  if (!input) {
+    document.getElementById('pinError').textContent = 'กรุณาใส่ PIN';
+    return;
+  }
+  state.pin = input;
+  document.getElementById('pinGate').classList.add('hidden');
+  initApp();
+}
+
+document.getElementById('pinInput').addEventListener('keypress', e => {
+  if (e.key === 'Enter') checkPin();
+});
+
+/* ============================================================
+   API URL
+   ============================================================ */
+function saveApiUrl() {
+  const url = document.getElementById('apiUrl').value.trim();
+  if (!url || !url.includes('script.google.com')) {
+    showToast('URL ไม่ถูกต้อง ต้องเป็น Web App URL ของ Apps Script');
+    return;
+  }
+  state.apiUrl = url;
+  localStorage.setItem(STORAGE_KEY_URL, url);
+  document.getElementById('configWarn').style.display = 'none';
+  showToast('✅ บันทึก URL แล้ว', true);
+  loadGpRates();
+}
+
+function testConnection() {
+  if (!state.apiUrl) { showToast('ใส่ URL ก่อน'); return; }
+  showToast('🔍 กำลังทดสอบ...', true);
+  jsonpRequest(state.apiUrl + '?action=ping', (data) => {
+    if (data && data.status === 'ok') {
+      showToast('✅ เชื่อมต่อสำเร็จ: ' + (data.message || ''), true);
+    } else {
+      showToast('❌ เชื่อมต่อไม่สำเร็จ');
+    }
+  }, () => showToast('❌ เชื่อมต่อไม่ได้ ตรวจสอบ URL'));
+}
+
+/* ============================================================
+   INIT APP
+   ============================================================ */
+function initApp() {
+  if (state.apiUrl) {
+    document.getElementById('apiUrl').value = state.apiUrl;
+    document.getElementById('configWarn').style.display = 'none';
+    loadGpRates();
+  } else {
+    // ไม่มี URL → ให้ใช้ค่า default ก่อน
+    state.serverData = {};
+    BRANCHES.forEach(b => state.serverData[b] = { ...DEFAULT_GP });
+    state.localData = JSON.parse(JSON.stringify(state.serverData));
+    renderTable();
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'block';
+  }
+  updatePreview();
+}
+
+/* ============================================================
+   LOAD GP RATES
+   ============================================================ */
+function loadGpRates() {
+  if (!state.apiUrl) return;
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('tableWrap').style.display = 'none';
+
+  jsonpRequest(state.apiUrl + '?action=getGpRatesAll', (data) => {
+    if (data && data.status === 'ok') {
+      state.serverData = data.rates || {};
+      // เติม branch ที่ยังไม่มีด้วย default
+      BRANCHES.forEach(b => {
+        if (!state.serverData[b]) state.serverData[b] = { ...DEFAULT_GP };
+      });
+      state.localData = JSON.parse(JSON.stringify(state.serverData));
+      renderTable();
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('tableWrap').style.display = 'block';
+      showToast('✅ โหลด GP จาก Sheet สำเร็จ', true);
+    } else {
+      showToast('❌ โหลดข้อมูลไม่สำเร็จ');
+    }
+  }, () => {
+    showToast('❌ เชื่อมต่อไม่ได้ ใช้ค่า default ชั่วคราว');
+    BRANCHES.forEach(b => state.serverData[b] = { ...DEFAULT_GP });
+    state.localData = JSON.parse(JSON.stringify(state.serverData));
+    renderTable();
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'block';
+  });
+}
+
+function reloadFromServer() {
+  if (hasUnsavedChanges() && !confirm('มีการแก้ไขที่ยังไม่ได้บันทึก ต้องการทิ้งและโหลดใหม่หรือไม่?')) return;
+  loadGpRates();
+}
+
+/* ============================================================
+   RENDER TABLE
+   ============================================================ */
+function renderTable() {
+  const tbody = document.getElementById('gpTableBody');
+  tbody.innerHTML = '';
+  BRANCHES.forEach(branch => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td class="branch-cell">📍 ${branch}</td>`;
+    PLATFORMS.forEach(p => {
+      const td = document.createElement('td');
+      const currentVal = state.localData[branch]?.[p] ?? DEFAULT_GP[p];
+      const serverVal = state.serverData[branch]?.[p] ?? DEFAULT_GP[p];
+      const changed = Number(currentVal) !== Number(serverVal);
+      td.innerHTML = `
+        <input type="number" class="gp-input ${changed ? 'changed' : ''}"
+               min="0" max="100" step="0.1"
+               value="${currentVal}"
+               data-branch="${branch}" data-platform="${p}"
+               onchange="onGpChange(this)" oninput="onGpChange(this)">
+        <span class="gp-suffix">%</span>
+        <span class="net-preview">ได้ ${(100 - currentVal).toFixed(1)}%</span>
+      `;
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  });
+  updatePreview();
+}
+
+function onGpChange(input) {
+  const branch = input.dataset.branch;
+  const platform = input.dataset.platform;
+  const val = parseFloat(input.value);
+  if (isNaN(val) || val < 0 || val > 100) {
+    input.style.borderColor = 'var(--danger)';
+    return;
+  }
+  state.localData[branch][platform] = val;
+  // อัพเดต preview ในเซลล์
+  const previewSpan = input.parentElement.querySelector('.net-preview');
+  previewSpan.textContent = `ได้ ${(100 - val).toFixed(1)}%`;
+  // เปลี่ยนสี
+  const serverVal = state.serverData[branch]?.[platform] ?? DEFAULT_GP[platform];
+  if (Number(val) !== Number(serverVal)) input.classList.add('changed');
+  else input.classList.remove('changed');
+  updatePreview();
+}
+
+function hasUnsavedChanges() {
+  return BRANCHES.some(b => PLATFORMS.some(p => {
+    const local = state.localData[b]?.[p];
+    const server = state.serverData[b]?.[p];
+    return Number(local) !== Number(server);
+  }));
+}
+
+/* ============================================================
+   PREVIEW
+   ============================================================ */
+function updatePreview() {
+  const amount = parseFloat(document.getElementById('previewAmount')?.value) || 1000;
+  const area = document.getElementById('previewArea');
+  if (!area) return;
+  let html = '';
+  BRANCHES.forEach(branch => {
+    html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent);">📍 ${branch}</strong>`;
+    html += `<div class="preview-grid" style="margin-top:6px;">`;
+    PLATFORMS.forEach(p => {
+      const gp = state.localData[branch]?.[p] ?? DEFAULT_GP[p];
+      const net = amount * (1 - gp / 100);
+      html += `
+        <div class="preview-item">
+          <div class="label">${PLATFORM_LABELS[p]} (${gp}%)</div>
+          <div class="value">${net.toLocaleString('th-TH', {maximumFractionDigits:0})} ฿</div>
+        </div>
+      `;
+    });
+    html += `</div></div>`;
+  });
+  area.innerHTML = html;
+}
+
+/* ============================================================
+   RESET DEFAULT
+   ============================================================ */
+function resetToDefault() {
+  if (!confirm('Reset ทุกสาขากลับเป็นค่ามาตรฐาน (Grab/LINE MAN/Shopee 32%, Panda 35%, Robin/อื่นๆ 30%) ใช่หรือไม่?\n\n⚠️ ยังไม่ได้บันทึก - กดบันทึกอีกครั้งหลังตรวจสอบ')) return;
+  BRANCHES.forEach(b => {
+    state.localData[b] = { ...DEFAULT_GP };
+  });
+  renderTable();
+  showToast('🔄 Reset แล้ว - กดบันทึกเพื่อยืนยัน', true);
+}
+
+/* ============================================================
+   CONFIRM SAVE
+   ============================================================ */
+function confirmSave() {
+  if (!hasUnsavedChanges()) {
+    showToast('ไม่มีรายการที่เปลี่ยนแปลง');
+    return;
+  }
+  if (!state.apiUrl) {
+    showToast('❌ ตั้งค่า URL Apps Script ก่อน');
+    return;
+  }
+
+  // สร้าง diff list
+  let html = '';
+  BRANCHES.forEach(b => {
+    PLATFORMS.forEach(p => {
+      const old = state.serverData[b]?.[p];
+      const neu = state.localData[b][p];
+      if (Number(old) !== Number(neu)) {
+        html += `<div class="diff-line">📍 <strong>${b}</strong> · ${PLATFORM_LABELS[p]}: <strong>${old}%</strong> → <strong style="color:var(--success);">${neu}%</strong></div>`;
+      }
+    });
+  });
+  document.getElementById('diffList').innerHTML = html;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
+
+/* ============================================================
+   SAVE TO APPS SCRIPT
+   ============================================================ */
+async function doSave() {
+  closeConfirm();
+  showToast('⏳ กำลังบันทึก...', true);
+
+  const payload = {
+    action: 'updateGpRates',
+    pin: state.pin,
+    adminName: 'Admin',
+    rates: state.localData
+  };
+
+  try {
+    await fetch(state.apiUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    // ใน no-cors เราอ่าน response ไม่ได้ → assume success + reload
+    setTimeout(() => {
+      showToast('✅ บันทึกสำเร็จ - กำลัง verify จาก Sheet', true);
+      loadGpRates();
+    }, 1500);
+  } catch (err) {
+    console.error(err);
+    showToast('❌ เชื่อมต่อไม่ได้: ' + err.message);
+  }
+}
+
+/* ============================================================
+   JSONP HELPER (สำหรับ GET cross-origin)
+   ============================================================ */
+function jsonpRequest(url, onSuccess, onError) {
+  const callbackName = 'cb_' + Date.now() + Math.random().toString(36).slice(2, 8);
+  const sep = url.includes('?') ? '&' : '?';
+  const fullUrl = url + sep + 'callback=' + callbackName;
+
+  const timeoutId = setTimeout(() => {
+    cleanup();
+    if (onError) onError(new Error('timeout'));
+  }, 15000);
+
+  window[callbackName] = (data) => {
+    clearTimeout(timeoutId);
+    cleanup();
+    if (onSuccess) onSuccess(data);
+  };
+
+  const script = document.createElement('script');
+  script.src = fullUrl;
+  script.onerror = () => {
+    clearTimeout(timeoutId);
+    cleanup();
+    if (onError) onError(new Error('script error'));
+  };
+  document.head.appendChild(script);
+
+  function cleanup() {
+    delete window[callbackName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+  }
+}
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function showToast(msg, success = false) {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg;
+  t.className = 'toast show' + (success ? ' success' : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Warn before leaving with unsaved changes
+window.addEventListener('beforeunload', (e) => {
+  if (hasUnsavedChanges()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+</script>
+</body>
+</html>
