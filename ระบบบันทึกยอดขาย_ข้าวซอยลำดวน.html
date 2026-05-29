@@ -957,7 +957,7 @@ body {
           <strong id="rcpCashOwner">0 ฿</strong>
         </div>
         <div class="summary-line profit-box">
-          <span>✨ กำไรสุทธิ</span>
+          <span>✨ รายรับหลังหักรายจ่าย</span>
           <strong id="rcpProfit">0 ฿</strong>
         </div>
       </div>
@@ -981,7 +981,7 @@ body {
   <!-- HEADER -->
   <div class="header">
     <h1>🍜 ข้าวซอยลำดวนฟ้าฮ่าม</h1>
-    <div class="sub">ระบบบันทึกยอดขายประจำวัน <span style="opacity:0.7;font-size:14px;">v2.1</span></div>
+    <div class="sub">ระบบบันทึกยอดขายประจำวัน <span style="opacity:0.7;font-size:14px;">v2.2</span></div>
     <div class="branch-info" id="branchLabel" onclick="openBranchSelector()" title="กดเพื่อเปลี่ยนสาขา">— ยังไม่เลือกสาขา —</div>
     <a href="Admin_ตั้งค่าGP.html" style="display:inline-block;margin-top:10px;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:14px;">⚙️ Admin · ตั้งค่า GP</a>
   </div>
@@ -1204,7 +1204,7 @@ body {
     </div>
 
     <div class="profit-card">
-      <div class="caption">✨ กำไรสุทธิประจำวัน</div>
+      <div class="caption">✨ รายรับหลังหักรายจ่าย (ประจำวัน)</div>
       <div class="amount" id="netProfit">0 ฿</div>
       <div class="sub-note" style="font-size:14px;opacity:0.85;">= รายรับรวม − รายจ่ายจริงวันนี้ (ไม่นับยอดค้างที่ยกไปพรุ่งนี้)</div>
     </div>
@@ -1568,7 +1568,7 @@ function updateCashBox() {
    รายจ่ายใหม่ - ระบบ Toggle สถานะ
    ============================================================ */
 // รายการยอดนิยม - เพิ่ม/แก้ได้ตามต้องการ
-const FREQUENT_EXPENSES = ['ค่าของสด', 'ค่าแก๊ส', 'ค่าน้ำแข็ง'];
+const FREQUENT_EXPENSES = ['ค่าของสด', 'ค่าแก๊ส', 'ค่าน้ำแข็ง', 'ค่ากะทิ', 'ค่าน้ำ'];
 
 function addExpense() {
   const id = 'exp-' + Date.now() + Math.random().toString(36).slice(2,6);
@@ -1831,7 +1831,7 @@ function openConfirm() {
   }
 
   html += `<br><strong style="color: var(--cash-blue); font-size: 22px;">📦 เงินส่งคืนเจ้าของ: ${formatMoney(data.cashToOwner)} ฿</strong><br>`;
-  html += `<strong style="color: var(--income-green); font-size: 22px;">✨ กำไรสุทธิ: ${formatMoney(data.netProfit)} ฿</strong>`;
+  html += `<strong style="color: var(--income-green); font-size: 22px;">✨ รายรับหลังหักรายจ่าย: ${formatMoney(data.netProfit)} ฿</strong>`;
 
   document.getElementById('confirmSummary').innerHTML = html;
   document.getElementById('confirmModal').classList.remove('hidden');
