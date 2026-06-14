@@ -310,8 +310,7 @@ body {
   margin-bottom: 12px;
   transition: border-color 0.2s;
 }
-.expense-card.paid { border-color: var(--income-green); background: #F0FDF4; }
-.expense-card.defer { border-color: var(--defer-orange); background: #FFFBEB; }
+.expense-card.active-edit { border-color: var(--primary); }
 
 .expense-row-inputs {
   display: flex;
@@ -345,60 +344,6 @@ body {
   width: 56px;
   cursor: pointer;
 }
-
-/* สวิตช์สถานะใหญ่ๆ 2 ปุ่ม */
-.status-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  background: #F3F4F6;
-  padding: 4px;
-  border-radius: 12px;
-}
-.status-btn {
-  padding: 14px 8px;
-  font-size: 18px;
-  font-weight: 800;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: inherit;
-  transition: all 0.15s;
-}
-.status-btn.active-paid {
-  background: var(--income-green);
-  color: white;
-  box-shadow: 0 2px 8px rgba(5,150,105,0.35);
-}
-.status-btn.active-defer {
-  background: var(--defer-orange);
-  color: white;
-  box-shadow: 0 2px 8px rgba(245,158,11,0.35);
-}
-
-/* รายการค้างเก่า (compact checkbox-style) */
-.old-expense-card {
-  background: white;
-  border: 3px solid var(--defer-orange);
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 10px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: center;
-}
-.old-expense-card.paying { border-color: var(--income-green); background: #F0FDF4; }
-.old-expense-info strong { display: block; font-size: 20px; }
-.old-expense-info small { color: var(--text-muted); }
-.old-expense-info .amount {
-  color: var(--defer-dark);
-  font-weight: 800;
-  font-size: 22px;
-}
-.old-expense-card.paying .old-expense-info .amount { color: var(--income-green); }
 
 /* ========== Frequent Use Tags (รายการยอดนิยม) ========== */
 .freq-tags {
@@ -596,65 +541,156 @@ body {
   box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
 }
 
-/* ========== CASH ALERT MODAL (กระพริบสีแดง) ========== */
-.cash-alert-modal {
-  border: 6px solid var(--expense-red);
-  animation: redFlash 0.9s infinite;
-  text-align: center;
-}
-@keyframes redFlash {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7), 0 20px 60px rgba(220,38,38,0.5);
-    border-color: var(--expense-red);
-  }
-  50% {
-    box-shadow: 0 0 0 24px rgba(220, 38, 38, 0), 0 20px 60px rgba(220,38,38,0.5);
-    border-color: #991B1B;
-  }
-}
-.cash-alert-icon {
-  font-size: 72px;
-  margin-bottom: 6px;
-  animation: shake 0.5s infinite;
-  display: inline-block;
-}
-@keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(10deg); }
-}
-.cash-alert-amount {
-  background: var(--expense-light);
-  color: var(--expense-red);
-  font-size: 28px;
-  font-weight: 900;
-  padding: 16px;
-  border-radius: 14px;
-  border: 3px dashed var(--expense-red);
-  margin-top: 8px;
-}
-
-/* ========== CASH WARNING (สำคัญ) ========== */
-.cash-warning {
+/* ========== CASH PREVIEW (แสดงปกติ ไม่กระพริบ) ========== */
+.cash-preview {
   margin-top: 16px;
   padding: 18px;
   border-radius: 14px;
   font-size: 18px;
   font-weight: 700;
   text-align: center;
+  background: linear-gradient(135deg, var(--cash-blue), #1D4ED8);
+  color: white;
+  border: 3px solid #1D4ED8;
 }
-.cash-warning.ok { background: var(--income-light); color: var(--income-green); border: 3px solid var(--income-green); }
-.cash-warning.alert {
-  background: var(--expense-light);
-  color: var(--expense-red);
-  border: 3px solid var(--expense-red);
-  animation: pulseRed 1.5s infinite;
+.cash-preview .big-num { font-size: 32px; font-weight: 900; display: block; margin: 4px 0; }
+.cash-preview.negative {
+  background: linear-gradient(135deg, var(--expense-red), #991B1B);
+  border-color: #991B1B;
 }
-@keyframes pulseRed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
-  50%      { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
+
+/* ========== READONLY CARD - ยอดติดลบสะสม ========== */
+.expense-card.readonly {
+  border-color: var(--defer-orange) !important;
+  background: var(--defer-light) !important;
+  position: relative;
 }
-.cash-warning .big-num { font-size: 28px; font-weight: 900; display: block; margin: 4px 0; }
+.expense-card.readonly .exp-note,
+.expense-card.readonly .exp-amount {
+  background: white;
+  border-color: var(--defer-orange);
+  color: var(--defer-dark);
+  font-weight: 800;
+  pointer-events: none;
+}
+.expense-card.readonly .btn-remove { display: none; }
+.expense-card.readonly .freq-tags { display: none; }
+.expense-card.readonly::before {
+  content: '🔒 ระบบ Auto-carry ยอดติดลบสะสม';
+  display: block;
+  font-size: 14px;
+  color: var(--defer-dark);
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.shortage-meta {
+  text-align: center;
+  font-size: 13px;
+  color: var(--defer-dark);
+  font-weight: 700;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(245,158,11,0.15);
+  border-radius: 6px;
+  border-left: 3px solid var(--defer-orange);
+}
+.shortage-meta .view-history {
+  background: none;
+  border: none;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 800;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 0;
+  margin-left: 6px;
+}
+
+/* ========== Banner เตือนสีเหลือง (ติดลบเกิน threshold) ========== */
+.shortage-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 3px solid var(--warning, #F59E0B);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.25);
+  animation: bannerSlide 0.4s ease-out;
+}
+@keyframes bannerSlide {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.shortage-banner-icon {
+  font-size: 40px;
+  flex: 0 0 auto;
+  animation: gentleSway 2.4s ease-in-out infinite;
+}
+@keyframes gentleSway {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+.shortage-banner-text { flex: 1 1 200px; min-width: 0; }
+.shortage-banner-text strong {
+  display: block;
+  color: #92400E;
+  font-size: 18px;
+  margin-bottom: 4px;
+  font-weight: 900;
+}
+.shortage-banner-text small {
+  display: block;
+  color: #B45309;
+  font-size: 14px;
+  font-weight: 600;
+}
+.shortage-banner .btn-detail {
+  background: var(--warning, #F59E0B);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.4);
+}
+.shortage-banner .btn-detail:active { transform: scale(0.96); }
+
+/* ========== Breakdown Modal ========== */
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.breakdown-table th, .breakdown-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.breakdown-table th {
+  background: var(--defer-light);
+  color: var(--defer-dark);
+  font-weight: 800;
+}
+.breakdown-table td.delta-up { color: var(--expense-red); font-weight: 700; }
+.breakdown-table td.delta-down { color: var(--income-green); font-weight: 700; }
+.breakdown-table td.balance { font-weight: 900; color: var(--defer-dark); }
+.breakdown-summary {
+  background: var(--defer-light);
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border-left: 4px solid var(--defer-orange);
+}
+.breakdown-summary strong { color: var(--defer-dark); }
 
 /* ========== SUMMARY ========== */
 .summary-row {
@@ -842,18 +878,29 @@ body {
   </div>
 </div>
 
-<!-- ================ POPUP เตือนเงินสดไม่พอ (กระพริบสีแดง) ================ -->
-<div class="modal-backdrop hidden" id="cashAlertModal">
-  <div class="modal cash-alert-modal">
-    <div class="cash-alert-icon">⚠️</div>
-    <h2 style="color: var(--expense-red); text-align:center; font-size:30px; margin-bottom:8px;">เงินสดไม่พอจ่าย!</h2>
-    <div class="cash-alert-amount" id="cashAlertAmount">เงินสดไม่พอ 0 ฿</div>
-    <p style="text-align:center; font-size:19px; color:var(--text-main); margin: 18px 0; font-weight:600;">
-      💡 <strong>แนะนำ:</strong> กดปุ่ม <span style="background:var(--defer-orange); color:white; padding:4px 10px; border-radius:8px; font-weight:800;">⏳ ยกไปพรุ่งนี้</span> สำหรับบางรายการ
+<!-- ================ MODAL Breakdown ประวัติยอดติดลบสะสม ================ -->
+<div class="modal-backdrop hidden" id="breakdownModal">
+  <div class="modal" style="max-width:560px;">
+    <h2 style="color: var(--defer-orange);">📊 ประวัติยอดติดลบสะสม</h2>
+    <div class="breakdown-summary" id="breakdownSummary"></div>
+    <div style="max-height:50vh; overflow-y:auto;">
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>วันที่</th>
+            <th>เปลี่ยน</th>
+            <th>คงค้าง</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownTbody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:13px; color:var(--text-muted); margin-top:12px;">
+      ⬆️ ติดลบเพิ่มจากเดิม | ⬇️ จ่ายคืนได้บางส่วน | ⭐ วันแรกที่เริ่มติดลบ
     </p>
-    <button class="btn btn-primary" style="width:100%; background: var(--expense-red); font-size:22px;" onclick="closeCashAlert()">
-      ✕ ปิดหน้าต่าง รับทราบแล้ว
-    </button>
+    <div style="margin-top:18px;">
+      <button class="btn btn-primary" style="width:100%;" onclick="closeBreakdownModal()">✓ ปิด</button>
+    </div>
   </div>
 </div>
 
@@ -981,7 +1028,7 @@ body {
   <!-- HEADER -->
   <div class="header">
     <h1>🍜 ข้าวซอยลำดวนฟ้าฮ่าม</h1>
-    <div class="sub">ระบบบันทึกยอดขายประจำวัน <span style="opacity:0.7;font-size:14px;">v2.2</span></div>
+    <div class="sub">ระบบบันทึกยอดขายประจำวัน <span style="opacity:0.7;font-size:14px;">v2.4</span></div>
     <div class="branch-info" id="branchLabel" onclick="openBranchSelector()" title="กดเพื่อเปลี่ยนสาขา">— ยังไม่เลือกสาขา —</div>
     <a href="Admin_ตั้งค่าGP.html" style="display:inline-block;margin-top:10px;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:14px;">⚙️ Admin · ตั้งค่า GP</a>
   </div>
@@ -1127,40 +1174,25 @@ body {
     <div class="section-title" style="color: var(--expense-red); border-bottom-color: var(--expense-red);">💸 ส่วนที่ 3: รายจ่ายประจำวัน</div>
 
     <p class="help-text">
-      💡 แต่ละรายการเลือก <strong style="color: var(--income-green);">💰 จ่ายเลยวันนี้</strong> หรือ <strong style="color: var(--defer-orange);">⏳ ยกไปพรุ่งนี้</strong><br>
-      🏦 ถ้าเงินสดไม่พอจ่าย ให้เลือก "ยกไปพรุ่งนี้" → รายการจะถูกเก็บไว้ให้บันทึกจ่ายในวันถัดไป
+      💡 กรอกแค่ <strong>ชื่อรายการ</strong> และ <strong>จำนวนเงิน</strong> ก็พอ ระบบจะคำนวณเงินส่งคืนเจ้าของให้อัตโนมัติ<br>
+      🏦 ถ้าเงินสดไม่พอจ่าย → ระบบจะ <strong>ยกยอดติดลบไปบันทึกเป็นรายจ่ายแรกของวันพรุ่งนี้ให้อัตโนมัติ</strong>
     </p>
 
-    <!-- ส่วน A: ยอดค้างจากเมื่อวาน -->
-    <div id="oldExpenseSection" style="display:none;">
-      <div class="expense-group-title old">📌 ยอดค้างจากเมื่อวาน (ต้องจัดการก่อน)</div>
-      <p class="help-text" style="background:#FEF3C7; border-left-color:var(--defer-orange);">
-        รายการที่ยกมาจากวันก่อน — กดปุ่มเพื่อเลือกว่า <strong>จ่ายวันนี้</strong> หรือ <strong>ยกต่อไปพรุ่งนี้อีก</strong>
-      </p>
-      <div id="oldExpenseList"></div>
-    </div>
-
-    <!-- ส่วน B: รายจ่ายใหม่วันนี้ -->
-    <div class="expense-group-title today">➕ รายจ่ายใหม่วันนี้</div>
     <div id="expenseList"></div>
 
     <button class="btn-add-expense" onclick="addExpense()">➕ เพิ่มรายการรายจ่าย</button>
 
     <!-- สรุปแบบ Live -->
-    <div class="summary-row" style="background: var(--income-light); margin-top: 20px;">
-      <span class="label">✅ จ่ายจริงวันนี้ (หักจากเงินสด)</span>
-      <span class="value" id="paidTodayTotal" style="color: var(--income-green);">0 ฿</span>
-    </div>
-    <div class="summary-row" style="background: var(--defer-light);">
-      <span class="label">⏳ ยกไปจ่ายพรุ่งนี้ (ไม่หักวันนี้)</span>
-      <span class="value" id="deferredTotal" style="color: var(--defer-dark);">0 ฿</span>
+    <div class="summary-row" style="background: var(--expense-light); margin-top: 20px;">
+      <span class="label">🔴 รวมรายจ่ายทั้งหมดวันนี้</span>
+      <span class="value" id="paidTodayTotal" style="color: var(--expense-red);">0 ฿</span>
     </div>
 
-    <!-- คำเตือนเงินสดไม่พอ -->
-    <div class="cash-warning ok" id="cashCheckBox">
-      <div>💰 เงินสดในลิ้นชักหลังหักรายจ่าย:</div>
+    <!-- ไลฟ์พรีวิว เงินส่งคืนเจ้าของ (แสดงปกติ ไม่กระพริบ) -->
+    <div class="cash-preview" id="cashCheckBox">
+      <div>📦 เงินส่งคืนเจ้าของ (Preview):</div>
       <div class="big-num" id="cashAfterExp">0 ฿</div>
-      <div id="cashCheckMsg">✓ เงินสดพอจ่ายรายจ่ายวันนี้</div>
+      <div id="cashCheckMsg" style="font-size:14px; opacity:0.85;">= เงินสดในลิ้นชัก − รวมรายจ่ายทั้งหมด</div>
     </div>
 
     <div class="nav-buttons">
@@ -1232,7 +1264,10 @@ const CONFIG = {
     grab: 32, lineman: 32, shopee: 32,
     robin: 30, other: 30
   },
-  GP_CACHE_TTL_MS: 60 * 60 * 1000  // 1 ชั่วโมง
+  GP_CACHE_TTL_MS: 60 * 60 * 1000,  // 1 ชั่วโมง
+
+  // v2.4: Threshold เตือนเมื่อยอดติดลบสะสมเกินค่านี้ (บาท)
+  SHORTAGE_WARNING_THRESHOLD: 1000
 };
 
 // อ่าน URL จาก localStorage ถ้า Admin Panel เคยตั้งไว้
@@ -1246,9 +1281,9 @@ if (!CONFIG.GOOGLE_SHEETS_URL) {
 let state = {
   branch: null,
   currentStep: 1,
-  oldExpenses: [],  // รายการค้างจากเมื่อวาน [{note, amount, dateIncurred, willPay}]
-  gpRates: { ...CONFIG.GP_RATES_DEFAULT },  // GP Rate ปัจจุบันของสาขาที่เลือก
-  cashAlertDismissed: false  // ผู้ใช้กดปิด popup เตือนเงินสดแล้วหรือยัง (กันสแปม)
+  shortageData: null,   // v2.4: ข้อมูลยอดติดลบสะสมทั้งหมด {total, since, sinceISO, history[]}
+  shortageAmount: 0,    // จำนวนติดลบรวมปัจจุบัน (ใช้คำนวณเฉยๆ)
+  gpRates: { ...CONFIG.GP_RATES_DEFAULT }  // GP Rate ปัจจุบันของสาขาที่เลือก
 };
 
 /* ============================================================
@@ -1283,8 +1318,12 @@ function selectBranch(name) {
   document.getElementById('branchLabel').textContent = '📍 สาขา ' + name;
   document.getElementById('branchModal').classList.add('hidden');
 
-  // โหลดรายจ่ายค้างจาก localStorage ของสาขานี้
-  loadOldExpenses(name);
+  // ล้างรายการรายจ่ายเดิม + โหลดยอดติดลบของสาขานี้ (Auto-Carryover)
+  if (prevBranch && prevBranch !== name) {
+    document.getElementById('expenseList').innerHTML = '';
+    addExpense();
+  }
+  loadShortageForBranch(name);
 
   // โหลด GP Rate ของสาขานี้จาก Sheet (มี cache)
   loadGpRatesForBranch(name);
@@ -1422,56 +1461,213 @@ function jsonpRequest(url, onSuccess, onError) {
   }
 }
 
-function loadOldExpenses(branch) {
-  const key = 'deferred_' + branch;
+/* ============================================================
+   v2.4 Auto-Carryover with History
+   - เก็บเป็น JSON Object: {total, since, sinceISO, history[]}
+   - Backward-compat: รับค่าเดิม (plain number) ก็ได้
+   - แสดงวันที่เริ่มติดลบ + จำนวนวัน
+   - Banner เตือนสีเหลืองถ้าเกิน threshold
+   ============================================================ */
+function loadShortageForBranch(branch) {
+  const key = 'shortage_' + branch;
   const raw = localStorage.getItem(key);
-  if (!raw) {
-    state.oldExpenses = [];
-    document.getElementById('oldExpenseSection').style.display = 'none';
-    return;
-  }
-  try {
-    const items = JSON.parse(raw);
-    if (!Array.isArray(items) || items.length === 0) {
-      state.oldExpenses = [];
-      document.getElementById('oldExpenseSection').style.display = 'none';
-      return;
+
+  // ล้าง UI เก่า
+  const oldReadonly = document.querySelector('.expense-card.readonly');
+  if (oldReadonly) oldReadonly.remove();
+  const oldBanner = document.querySelector('.shortage-banner');
+  if (oldBanner) oldBanner.remove();
+
+  let shortageData = null;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      // รูปแบบใหม่ v2.4
+      if (parsed && typeof parsed === 'object' && typeof parsed.total === 'number') {
+        shortageData = parsed;
+      } else if (typeof parsed === 'number' && parsed > 0) {
+        // รูปแบบเก่า (number)
+        shortageData = migrateOldShortage(parsed);
+      }
+    } catch(e) {
+      // รูปแบบเก่าสุด (plain string number)
+      const num = parseFloat(raw);
+      if (num > 0) shortageData = migrateOldShortage(num);
     }
-    state.oldExpenses = items.map(x => ({ ...x, willPay: true })); // default: จ่ายวันนี้
-    renderOldExpenses();
-    document.getElementById('oldExpenseSection').style.display = 'block';
-    showToast('📌 พบยอดค้างจากเมื่อวาน ' + items.length + ' รายการ', true);
-  } catch(e) {
-    state.oldExpenses = [];
   }
-}
 
-function renderOldExpenses() {
-  const container = document.getElementById('oldExpenseList');
-  container.innerHTML = '';
-  state.oldExpenses.forEach((item, idx) => {
-    const card = document.createElement('div');
-    card.className = 'old-expense-card' + (item.willPay ? ' paying' : '');
-    card.innerHTML = `
-      <div class="old-expense-info">
-        <strong>${escapeHtml(item.note)}</strong>
-        <small>เกิดเมื่อ ${item.dateIncurred || '-'}</small>
-        <div class="amount">${formatMoney(item.amount)} ฿</div>
-      </div>
-      <div class="status-toggle" style="width:220px;">
-        <button class="status-btn ${item.willPay ? 'active-paid' : ''}" onclick="toggleOldExpense(${idx}, true)">💰 จ่ายวันนี้</button>
-        <button class="status-btn ${!item.willPay ? 'active-defer' : ''}" onclick="toggleOldExpense(${idx}, false)">⏳ ยกต่อ</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
+  state.shortageData = shortageData;
+  state.shortageAmount = shortageData ? shortageData.total : 0;
 
-function toggleOldExpense(idx, willPay) {
-  state.oldExpenses[idx].willPay = willPay;
-  renderOldExpenses();
+  if (shortageData && shortageData.total > 0) {
+    insertShortageRow(shortageData);
+    // แสดง Banner ถ้าเกิน threshold
+    if (shortageData.total >= CONFIG.SHORTAGE_WARNING_THRESHOLD) {
+      insertShortageBanner(shortageData);
+    }
+    showToast('📌 พบยอดติดลบสะสม: ' + formatMoney(shortageData.total) + ' ฿', true);
+  }
   updateExpenseTotal();
   updateCashCheck();
+}
+
+function migrateOldShortage(num) {
+  // แปลงรูปแบบเก่า → ใหม่ (ไม่มีประวัติ)
+  return {
+    total: num,
+    since: 'ไม่ทราบวันที่',
+    sinceISO: '',
+    history: [{
+      date: 'ไม่ทราบวันที่',
+      dateISO: '',
+      delta: num,
+      balance: num,
+      note: 'ข้อมูลก่อนอัพเดต v2.4'
+    }]
+  };
+}
+
+function insertShortageRow(shortageData) {
+  const container = document.getElementById('expenseList');
+  const id = 'shortage-row';
+  const card = document.createElement('div');
+  card.className = 'expense-card readonly';
+  card.dataset.id = id;
+  card.dataset.shortage = 'true';
+
+  const days = (shortageData.history || []).length;
+  let metaText = '';
+  if (shortageData.since && shortageData.since !== 'ไม่ทราบวันที่') {
+    metaText = `ติดลบสะสมตั้งแต่ <strong>${escapeHtml(shortageData.since)}</strong>`;
+    if (days > 1) metaText += ` (${days} วัน)`;
+  } else {
+    metaText = 'ยกมาจากเมื่อวาน';
+  }
+  metaText += ` <button class="view-history" type="button" onclick="openBreakdownModal()">ดูประวัติ →</button>`;
+
+  card.innerHTML = `
+    <div class="expense-row-inputs">
+      <input type="text" class="exp-note" value="ยอดติดลบสะสม" readonly tabindex="-1">
+      <input type="number" class="exp-amount" value="${shortageData.total}" readonly tabindex="-1">
+      <button class="btn-remove" style="display:none;" tabindex="-1">✕</button>
+    </div>
+    <div class="shortage-meta">${metaText}</div>
+  `;
+  container.insertBefore(card, container.firstChild);
+}
+
+function insertShortageBanner(shortageData) {
+  const section = document.getElementById('section-3');
+  const helpText = section.querySelector('.help-text');
+  if (!helpText) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'shortage-banner';
+  const threshold = CONFIG.SHORTAGE_WARNING_THRESHOLD.toLocaleString();
+  banner.innerHTML = `
+    <div class="shortage-banner-icon">⚠️</div>
+    <div class="shortage-banner-text">
+      <strong>ยอดติดลบสะสมเกิน ${threshold} ฿</strong>
+      <small>ขณะนี้: ${formatMoney(shortageData.total)} ฿ • ตั้งแต่ ${escapeHtml(shortageData.since || '-')} — ควรแจ้งเจ้าของ</small>
+    </div>
+    <button type="button" class="btn-detail" onclick="openBreakdownModal()">ดูประวัติ</button>
+  `;
+  helpText.parentNode.insertBefore(banner, helpText);
+}
+
+/* ============================================================
+   v2.4: บันทึกยอดติดลบสะสม + ประวัติ
+   - ถ้ามียอดเดิม → คงวันที่ since เดิม + เพิ่ม entry ใหม่
+   - ถ้าไม่มียอดเดิม → เริ่มต้นใหม่
+   - ถ้า total = 0 → ลบ key ออก (เคลียร์หนี้)
+   ============================================================ */
+function saveShortageToStorage(branch, todayShortage, todayData) {
+  const key = 'shortage_' + branch;
+  const prev = state.shortageData;
+  const prevTotal = prev ? prev.total : 0;
+
+  if (todayShortage <= 0) {
+    // เคลียร์หนี้
+    localStorage.removeItem(key);
+    return;
+  }
+
+  const todayDateISO = new Date(todayData.timestamp).toISOString().split('T')[0];
+  const delta = todayShortage - prevTotal;
+  const newEntry = {
+    date: todayData.date,
+    dateISO: todayDateISO,
+    delta: delta,
+    balance: todayShortage,
+    cashBox: todayData.cashBox,
+    expenseTotal: todayData.expenseTotal
+  };
+
+  let newData;
+  if (prev && prev.total > 0 && prev.history) {
+    // ติดลบสะสมเก่าอยู่แล้ว → เพิ่มประวัติ คงวันที่ since เดิม
+    newData = {
+      total: todayShortage,
+      since: prev.since,
+      sinceISO: prev.sinceISO,
+      history: [...prev.history, newEntry]
+    };
+  } else {
+    // เริ่มต้นใหม่
+    newEntry.note = 'วันแรกที่ติดลบ';
+    newData = {
+      total: todayShortage,
+      since: todayData.date,
+      sinceISO: todayDateISO,
+      history: [newEntry]
+    };
+  }
+
+  localStorage.setItem(key, JSON.stringify(newData));
+}
+
+/* ============================================================
+   v2.4: เปิด Modal ดูประวัติยอดติดลบ
+   ============================================================ */
+function openBreakdownModal() {
+  const data = state.shortageData;
+  if (!data || !data.history || data.history.length === 0) {
+    showToast('ไม่มีประวัติย้อนหลัง');
+    return;
+  }
+
+  // Summary
+  const days = data.history.length;
+  const summary = `
+    <div><strong>📍 สาขา:</strong> ${escapeHtml(state.branch)}</div>
+    <div><strong>⭐ เริ่มติดลบตั้งแต่:</strong> ${escapeHtml(data.since || '-')}</div>
+    <div><strong>📅 จำนวนวัน:</strong> ${days} วัน</div>
+    <div style="font-size:20px; margin-top:8px;"><strong style="color:var(--expense-red);">💰 ยอดคงค้างปัจจุบัน: ${formatMoney(data.total)} ฿</strong></div>
+  `;
+  document.getElementById('breakdownSummary').innerHTML = summary;
+
+  // Table rows
+  let rowsHtml = '';
+  data.history.forEach((h, idx) => {
+    const isFirst = idx === 0;
+    const deltaClass = h.delta > 0 ? 'delta-up' : (h.delta < 0 ? 'delta-down' : '');
+    const deltaIcon = h.delta > 0 ? '⬆️' : (h.delta < 0 ? '⬇️' : '−');
+    const deltaSign = h.delta > 0 ? '+' : '';
+    const star = isFirst ? '⭐ ' : '';
+    rowsHtml += `
+      <tr>
+        <td>${star}${escapeHtml(h.date || '-')}</td>
+        <td class="${deltaClass}">${deltaIcon} ${deltaSign}${formatMoney(h.delta)} ฿</td>
+        <td class="balance">${formatMoney(h.balance)} ฿</td>
+      </tr>
+    `;
+  });
+  document.getElementById('breakdownTbody').innerHTML = rowsHtml;
+  document.getElementById('breakdownModal').classList.remove('hidden');
+}
+
+function closeBreakdownModal() {
+  document.getElementById('breakdownModal').classList.add('hidden');
 }
 
 /* ============================================================
@@ -1574,9 +1770,8 @@ function addExpense() {
   const id = 'exp-' + Date.now() + Math.random().toString(36).slice(2,6);
   const container = document.getElementById('expenseList');
   const card = document.createElement('div');
-  card.className = 'expense-card paid';
+  card.className = 'expense-card';
   card.dataset.id = id;
-  card.dataset.status = 'paid'; // default: จ่ายเลยวันนี้
 
   // สร้าง HTML สำหรับปุ่ม Frequent Use
   const freqTagsHtml = FREQUENT_EXPENSES.map(name =>
@@ -1590,10 +1785,6 @@ function addExpense() {
       <button class="btn-remove" onclick="removeExpense('${id}')" aria-label="ลบ">✕</button>
     </div>
     <div class="freq-tags">${freqTagsHtml}</div>
-    <div class="status-toggle">
-      <button class="status-btn active-paid" onclick="setExpenseStatus('${id}','paid')">💰 จ่ายเลยวันนี้</button>
-      <button class="status-btn" onclick="setExpenseStatus('${id}','defer')">⏳ ยกไปพรุ่งนี้</button>
-    </div>
   `;
   container.appendChild(card);
 
@@ -1608,35 +1799,18 @@ function addExpense() {
   card.querySelectorAll('.freq-tag').forEach(btn => {
     btn.addEventListener('click', () => {
       noteInput.value = btn.dataset.text;
-      // ไฮไลท์ปุ่มที่กด + reset ปุ่มอื่นในแถวเดียวกัน
       card.querySelectorAll('.freq-tag').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
-      // focus ไปที่ amount ต่อ
       card.querySelector('.exp-amount').focus();
     });
   });
 
-  // ถ้าพิมพ์เอง → ลบ selected ของทุก tag (เพราะข้อความไม่ตรงแล้ว)
   noteInput.addEventListener('input', () => {
     card.querySelectorAll('.freq-tag').forEach(b => {
       if (b.dataset.text !== noteInput.value) b.classList.remove('selected');
       else b.classList.add('selected');
     });
   });
-}
-
-function setExpenseStatus(id, status) {
-  const card = document.querySelector(`[data-id="${id}"]`);
-  if (!card) return;
-  card.dataset.status = status;
-  card.classList.remove('paid', 'defer');
-  card.classList.add(status);
-  const btns = card.querySelectorAll('.status-btn');
-  btns.forEach(b => b.classList.remove('active-paid', 'active-defer'));
-  if (status === 'paid') btns[0].classList.add('active-paid');
-  else btns[1].classList.add('active-defer');
-  updateExpenseTotal();
-  updateCashCheck();
 }
 
 function removeExpense(id) {
@@ -1646,105 +1820,63 @@ function removeExpense(id) {
   updateCashCheck();
 }
 
+/* ============================================================
+   v2.3: คำนวณรายจ่ายแบบรวม (ไม่แยก paid/defer แล้ว)
+   รวมยอด ติดลบเมื่อวาน + รายจ่ายใหม่ทุกแถว
+   ============================================================ */
 function updateExpenseTotal() {
-  let paid = 0, defer = 0;
-  // รายจ่ายใหม่วันนี้
+  let total = 0;
   document.querySelectorAll('#expenseList .expense-card').forEach(card => {
     const amt = parseFloat(card.querySelector('.exp-amount').value) || 0;
-    if (card.dataset.status === 'paid') paid += amt;
-    else defer += amt;
+    total += amt;
   });
-  // รายจ่ายค้างเก่าที่ตัดสินใจจ่ายวันนี้
-  let oldPaid = 0, oldDefer = 0;
-  state.oldExpenses.forEach(x => {
-    if (x.willPay) oldPaid += x.amount;
-    else oldDefer += x.amount;
-  });
-  const totalPaid = paid + oldPaid;
-  const totalDefer = defer + oldDefer;
-  document.getElementById('paidTodayTotal').textContent = formatMoney(totalPaid) + ' ฿';
-  document.getElementById('deferredTotal').textContent = formatMoney(totalDefer) + ' ฿';
-  return { paid: totalPaid, defer: totalDefer, newPaid: paid, newDefer: defer, oldPaid, oldDefer };
+  document.getElementById('paidTodayTotal').textContent = formatMoney(total) + ' ฿';
+  return total;
 }
 
 /* ============================================================
    ระบบเตือนเงินสดไม่พอ
    ============================================================ */
+/* ============================================================
+   v2.3: คำนวณ "เงินส่งคืนเจ้าของ" แบบเรียลไทม์
+   - แสดงปกติ ไม่มี popup เตือน ไม่กระพริบ
+   - ถ้าติดลบ → เปลี่ยนสี การ์ดเป็นแดง (แต่ไม่ใช่ error)
+   ============================================================ */
 function updateCashCheck() {
   const cash = updateCashBox();
-  const exp = updateExpenseTotal();
-  const remaining = cash - exp.paid;
+  const expTotal = updateExpenseTotal();
+  const remaining = cash - expTotal;
   document.getElementById('cashAfterExp').textContent = formatMoney(remaining) + ' ฿';
 
   const box = document.getElementById('cashCheckBox');
   const msg = document.getElementById('cashCheckMsg');
-  box.classList.remove('ok', 'alert');
+  if (!box) return;
 
-  if (remaining >= 0) {
-    box.classList.add('ok');
-    msg.innerHTML = '✓ เงินสดพอจ่ายรายจ่ายวันนี้';
-    // Reset flag เพื่อให้ popup โผล่ได้อีกครั้งถ้าเงินไม่พอใหม่
-    state.cashAlertDismissed = false;
+  if (remaining < 0) {
+    box.classList.add('negative');
+    msg.textContent = `⚠️ ติดลบ ${formatMoney(Math.abs(remaining))} ฿ - จะถูกยกไปวันพรุ่งนี้อัตโนมัติ`;
   } else {
-    const shortAmount = Math.abs(remaining);
-    box.classList.add('alert');
-    msg.innerHTML = `⚠️ เงินสดไม่พอ <strong>${formatMoney(shortAmount)} ฿</strong><br>แนะนำ: กด "⏳ ยกไปพรุ่งนี้" สำหรับบางรายการ`;
-    // เปิด popup กระพริบ (ถ้ายังไม่ได้กดปิด)
-    if (!state.cashAlertDismissed && state.currentStep === 3) {
-      showCashAlert(shortAmount);
-    } else {
-      // ถ้า popup เปิดอยู่ → อัพเดตยอด real-time
-      updateCashAlertAmount(shortAmount);
-    }
+    box.classList.remove('negative');
+    msg.textContent = '= เงินสดในลิ้นชัก − รวมรายจ่ายทั้งหมด';
   }
-}
-
-/* ============================================================
-   Popup เตือนเงินสดไม่พอ (กระพริบสีแดง)
-   ============================================================ */
-function showCashAlert(shortAmount) {
-  const modal = document.getElementById('cashAlertModal');
-  if (modal.classList.contains('hidden')) {
-    updateCashAlertAmount(shortAmount);
-    modal.classList.remove('hidden');
-  }
-}
-
-function updateCashAlertAmount(shortAmount) {
-  const el = document.getElementById('cashAlertAmount');
-  if (el) el.textContent = `เงินสดไม่พอ ${formatMoney(shortAmount)} ฿`;
-}
-
-function closeCashAlert() {
-  document.getElementById('cashAlertModal').classList.add('hidden');
-  state.cashAlertDismissed = true;
 }
 
 /* ============================================================
    เก็บรายการรายจ่ายปัจจุบัน
    ============================================================ */
+/* ============================================================
+   v2.3: เก็บรายการรายจ่ายทั้งหมด (Array เดียว)
+   รวม "ติดลบเมื่อวาน" (ถ้ามี) + รายจ่ายใหม่ของวันนี้
+   ============================================================ */
 function collectExpenses() {
-  const expensesPaid = [];      // รายจ่ายใหม่วันนี้ที่จ่ายเลย
-  const expensesDeferred = [];  // รายจ่ายใหม่วันนี้ที่ยกไปพรุ่งนี้
-  const expensesOldPaid = [];   // รายจ่ายค้างเก่าที่จ่ายวันนี้
-  const expensesOldStillDeferred = []; // รายจ่ายค้างเก่าที่ยังยกต่อ
-
+  const expenses = [];
   document.querySelectorAll('#expenseList .expense-card').forEach(card => {
     const note = card.querySelector('.exp-note').value.trim();
     const amount = parseFloat(card.querySelector('.exp-amount').value) || 0;
     if (amount <= 0) return;
-    const item = { note: note || '(ไม่ระบุ)', amount };
-    if (card.dataset.status === 'paid') expensesPaid.push(item);
-    else expensesDeferred.push(item);
+    expenses.push({ note: note || '(ไม่ระบุ)', amount });
   });
-
-  state.oldExpenses.forEach(x => {
-    const item = { note: x.note, amount: x.amount, dateIncurred: x.dateIncurred };
-    if (x.willPay) expensesOldPaid.push(item);
-    else expensesOldStillDeferred.push(item);
-  });
-
-  return { expensesPaid, expensesDeferred, expensesOldPaid, expensesOldStillDeferred };
+  return expenses;
 }
 
 /* ============================================================
@@ -1752,36 +1884,34 @@ function collectExpenses() {
    ============================================================ */
 function updateSummary() {
   const delivery = updateDeliveryTotal();
-  const dine = parseFloat(document.getElementById('dineTotal').value) || 0;
+  const dine = toNumber(document.getElementById('dineTotal').value);
   const cash = updateCashBox();
-  const exp = updateExpenseTotal();
+  const expTotal = updateExpenseTotal();
 
   const revenue = delivery + dine;
-  const cashToOwner = cash - exp.paid;
-  const netProfit = revenue - exp.paid;
+  const cashToOwner = cash - expTotal;  // สามารถติดลบได้ (v2.3)
+  const netProfit = revenue - expTotal;
 
   document.getElementById('s-delivery').textContent = formatMoney(delivery) + ' ฿';
   document.getElementById('s-dine').textContent = formatMoney(dine) + ' ฿';
   document.getElementById('s-revenue').textContent = formatMoney(revenue) + ' ฿';
-  document.getElementById('s-expensePaid').textContent = formatMoney(exp.paid) + ' ฿';
+  document.getElementById('s-expensePaid').textContent = formatMoney(expTotal) + ' ฿';
   document.getElementById('cashToOwner').textContent = formatMoney(cashToOwner) + ' ฿';
   document.getElementById('netProfit').textContent = formatMoney(netProfit) + ' ฿';
 
-  // แสดงการ์ด defer ถ้ามี
+  // ซ่อนการ์ด defer (ไม่ใช้แล้วใน v2.3)
   const deferBox = document.getElementById('deferCardBox');
-  if (exp.defer > 0) {
-    deferBox.style.display = 'block';
-    document.getElementById('s-expenseDefer').textContent = formatMoney(exp.defer) + ' ฿';
-  } else {
-    deferBox.style.display = 'none';
-  }
+  if (deferBox) deferBox.style.display = 'none';
 
-  // เตือนเงินสดส่งคืนติดลบ
+  // ถ้าเงินส่งคืนติดลบ → เปลี่ยนสีการ์ดเป็นแดง พร้อมข้อความ Auto-carry
   const cashCard = document.getElementById('cashToOwner').parentElement;
+  const cashSubNote = cashCard.querySelector('.sub-note');
   if (cashToOwner < 0) {
     cashCard.style.background = 'linear-gradient(135deg, var(--expense-red), #991B1B)';
+    if (cashSubNote) cashSubNote.innerHTML = `🔁 ติดลบ ${formatMoney(Math.abs(cashToOwner))} ฿ — จะถูกบันทึกเป็นรายจ่ายแรกของวันพรุ่งนี้อัตโนมัติ`;
   } else {
     cashCard.style.background = 'linear-gradient(135deg, var(--cash-blue), #1D4ED8)';
+    if (cashSubNote) cashSubNote.innerHTML = '= เงินสดในลิ้นชัก − รายจ่ายรวมวันนี้';
   }
 }
 
@@ -1817,20 +1947,17 @@ function openConfirm() {
   html += `<strong>🛵 Delivery (สุทธิ):</strong> ${formatMoney(data.deliveryNet)} ฿<br>`;
   html += `<strong>🏪 หน้าร้าน:</strong> ${formatMoney(data.dineTotal)} ฿ (เงินสด ${formatMoney(data.cashBox)} ฿, สแกน ${formatMoney(data.scanTotal)} ฿)<br><br>`;
 
-  if ((data.expensesOldPaid || []).length) {
-    html += `<strong>📌 จ่ายค้างเก่า:</strong> ${formatMoney(data.expenseOldPaidTotal)} ฿<br>`;
-    data.expensesOldPaid.forEach(e => html += `&nbsp;&nbsp;✓ ${e.note}: ${formatMoney(e.amount)} ฿<br>`);
-  }
-  if ((data.expensesPaid || []).length) {
-    html += `<strong>💸 จ่ายใหม่วันนี้:</strong> ${formatMoney(data.expensesPaid.reduce((s,x)=>s+x.amount,0))} ฿<br>`;
-    data.expensesPaid.forEach(e => html += `&nbsp;&nbsp;• ${e.note}: ${formatMoney(e.amount)} ฿<br>`);
-  }
-  if ((data.expensesDeferred || []).length) {
-    html += `<br><strong style="color: var(--defer-dark);">⏳ ยกไปพรุ่งนี้:</strong> ${formatMoney(data.expenseDeferredTotal)} ฿<br>`;
-    data.expensesDeferred.forEach(e => html += `&nbsp;&nbsp;• ${e.note}: ${formatMoney(e.amount)} ฿<br>`);
+  if ((data.expenses || []).length) {
+    html += `<strong>💸 รายจ่ายทั้งหมด:</strong> ${formatMoney(data.expenseTotal)} ฿<br>`;
+    data.expenses.forEach(e => {
+      const tag = (e.note === 'ยอดติดลบสะสม' || e.note === 'ติดลบเมื่อวาน') ? ' <span style="color:#D97706;">🔒</span>' : '';
+      html += `&nbsp;&nbsp;• ${escapeHtml(e.note)}${tag}: ${formatMoney(e.amount)} ฿<br>`;
+    });
   }
 
-  html += `<br><strong style="color: var(--cash-blue); font-size: 22px;">📦 เงินส่งคืนเจ้าของ: ${formatMoney(data.cashToOwner)} ฿</strong><br>`;
+  const cashColor = data.cashToOwner < 0 ? 'var(--expense-red)' : 'var(--cash-blue)';
+  const cashLabel = data.cashToOwner < 0 ? '📦 เงินส่งคืนเจ้าของ (ติดลบ - ยกพรุ่งนี้):' : '📦 เงินส่งคืนเจ้าของ:';
+  html += `<br><strong style="color: ${cashColor}; font-size: 22px;">${cashLabel} ${formatMoney(data.cashToOwner)} ฿</strong><br>`;
   html += `<strong style="color: var(--income-green); font-size: 22px;">✨ รายรับหลังหักรายจ่าย: ${formatMoney(data.netProfit)} ฿</strong>`;
 
   document.getElementById('confirmSummary').innerHTML = html;
@@ -1844,39 +1971,37 @@ function closeConfirm() {
 /* ============================================================
    สร้าง Payload ส่งไป Apps Script
    ============================================================ */
+/* ============================================================
+   v2.3: Payload โครงสร้างใหม่
+   - expenses: Array เดียว (รวม "ติดลบเมื่อวาน" ไว้แล้ว)
+   - expenseTotal: ผลรวม
+   - cashToOwner: ติดลบได้
+   ============================================================ */
 function buildPayload() {
   const getNet = id => {
     const input = document.getElementById(id);
-    const gross = parseFloat(input.value) || 0;
+    const gross = toNumber(input.value);
     const rate = parseFloat(input.dataset.rate);
     return { gross, net: gross * rate };
   };
 
   const grab = getNet('grab'), lineman = getNet('lineman'), shopee = getNet('shopee');
   const robin = getNet('robin'), other = getNet('other');
-  // foodpanda ถูกยกเลิกการเข้าร่วม - คง field ไว้เพื่อ backward compatibility กับ Sheet
-  const panda = { gross: 0, net: 0 };
 
   const deliveryGross = grab.gross + lineman.gross + shopee.gross + robin.gross + other.gross;
   const deliveryNet = grab.net + lineman.net + shopee.net + robin.net + other.net;
 
-  const dineTotal = parseFloat(document.getElementById('dineTotal').value) || 0;
-  const scanTotal = parseFloat(document.getElementById('scanTotal').value) || 0;
-  const govProgram = parseFloat(document.getElementById('govProgram').value) || 0;
+  const dineTotal = toNumber(document.getElementById('dineTotal').value);
+  const scanTotal = toNumber(document.getElementById('scanTotal').value);
+  const govProgram = toNumber(document.getElementById('govProgram').value);
   const cashBox = Math.max(0, dineTotal - scanTotal - govProgram);
 
-  const ex = collectExpenses();
-  const paidNew = ex.expensesPaid.reduce((s,x)=>s+x.amount, 0);
-  const deferNew = ex.expensesDeferred.reduce((s,x)=>s+x.amount, 0);
-  const oldPaid = ex.expensesOldPaid.reduce((s,x)=>s+x.amount, 0);
-  const oldStillDefer = ex.expensesOldStillDeferred.reduce((s,x)=>s+x.amount, 0);
-
-  const expensePaidTotal = paidNew + oldPaid;  // จ่ายจริงวันนี้
-  const expenseDeferredTotal = deferNew + oldStillDefer;  // รวมยกไปพรุ่งนี้
+  const expenses = collectExpenses();
+  const expenseTotal = expenses.reduce((s, x) => s + x.amount, 0);
 
   const revenue = deliveryNet + dineTotal;
-  const cashToOwner = cashBox - expensePaidTotal;
-  const netProfit = revenue - expensePaidTotal;
+  const cashToOwner = cashBox - expenseTotal;  // สามารถติดลบได้
+  const netProfit = revenue - expenseTotal;
 
   const now = new Date();
   const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -1886,23 +2011,20 @@ function buildPayload() {
     branch: state.branch,
     date: dateStr,
     timestamp: now.toISOString(),
+    // Delivery
     grabGross: grab.gross,       grabNet: grab.net,
     linemanGross: lineman.gross, linemanNet: lineman.net,
     shopeeGross: shopee.gross,   shopeeNet: shopee.net,
-    pandaGross: panda.gross,     pandaNet: panda.net,
     robinGross: robin.gross,     robinNet: robin.net,
     otherGross: other.gross,     otherNet: other.net,
     deliveryGross, deliveryNet,
+    // หน้าร้าน
     dineTotal, scanTotal, govProgram, cashBox,
-    // รายจ่าย
-    expensesPaid: ex.expensesPaid,
-    expensesDeferred: [...ex.expensesDeferred, ...ex.expensesOldStillDeferred],
-    expensesOldPaid: ex.expensesOldPaid,
-    expensePaidTotal, expenseDeferredTotal,
-    expenseOldPaidTotal: oldPaid,
-    // สรุป
+    // รายจ่าย (v2.3 - Array เดียว)
+    expenses, expenseTotal,
+    // สรุป (cashToOwner ติดลบได้)
     revenue, cashToOwner, netProfit,
-    // GP Snapshot - บันทึก % ที่ใช้ ณ เวลานี้ (เผื่อย้อนตรวจสอบ)
+    // GP Snapshot
     gpSnapshot: { ...state.gpRates }
   };
 }
@@ -1914,8 +2036,11 @@ async function submitData() {
   const data = buildPayload();
   closeConfirm();
 
-  // บันทึกรายการ "ยกไปพรุ่งนี้" ลง localStorage
-  try { saveDeferredToStorage(data); } catch(e) { console.warn('save deferred error', e); }
+  // v2.4: บันทึกยอดติดลบสะสม + ประวัติ
+  try {
+    const shortage = data.cashToOwner < 0 ? Math.abs(data.cashToOwner) : 0;
+    saveShortageToStorage(data.branch, shortage, data);
+  } catch(e) { console.warn('save shortage error', e); }
 
   showToast('⏳ กำลังส่งข้อมูล...', true);
 
@@ -1981,42 +2106,39 @@ function showSummaryModal(data) {
   document.getElementById('rcpScan').textContent = formatMoney(data.scanTotal) + ' ฿';
   document.getElementById('rcpGov').textContent = formatMoney(data.govProgram) + ' ฿';
 
-  // รายจ่ายจริงวันนี้ (จ่ายใหม่ + ค้างเก่าจ่าย)
+  // v2.3: รายจ่ายทั้งหมด (Array เดียว รวม ติดลบเมื่อวาน)
   const expSection = document.getElementById('rcpExpenseSection');
-  const allPaid = [...(data.expensesOldPaid || []).map(e => ({...e, oldFlag: true})),
-                   ...(data.expensesPaid || [])];
-  if (allPaid.length > 0) {
+  const expList = (data.expenses || []);
+  if (expList.length > 0) {
     let expHtml = '';
-    allPaid.forEach(e => {
-      const tag = e.oldFlag ? ' <span style="color:#D97706;font-size:12px;">(ค้างเก่า)</span>' : '';
+    expList.forEach(e => {
+      const tag = (e.note === 'ยอดติดลบสะสม' || e.note === 'ติดลบเมื่อวาน') ? ' <span style="color:#D97706;font-size:12px;">🔒</span>' : '';
       expHtml += `<div class="receipt-line"><span>&nbsp;&nbsp;• ${escapeHtml(e.note)}${tag}</span><strong>${formatMoney(e.amount)} ฿</strong></div>`;
     });
     document.getElementById('rcpExpenseList').innerHTML = expHtml;
-    document.getElementById('rcpExpenseTotal').textContent = formatMoney(data.expensePaidTotal) + ' ฿';
+    document.getElementById('rcpExpenseTotal').textContent = formatMoney(data.expenseTotal) + ' ฿';
     expSection.style.display = 'block';
   } else {
     expSection.style.display = 'none';
   }
 
-  // ยกไปพรุ่งนี้
+  // ซ่อนการ์ด defer (v2.3 ไม่ใช้แล้ว)
   const deferSection = document.getElementById('rcpDeferSection');
-  if (data.expensesDeferred && data.expensesDeferred.length > 0) {
-    let dHtml = '';
-    data.expensesDeferred.forEach(e => {
-      dHtml += `<div class="receipt-line"><span>&nbsp;&nbsp;• ${escapeHtml(e.note)}</span><strong>${formatMoney(e.amount)} ฿</strong></div>`;
-    });
-    document.getElementById('rcpDeferList').innerHTML = dHtml;
-    document.getElementById('rcpDeferTotal').textContent = formatMoney(data.expenseDeferredTotal) + ' ฿';
-    deferSection.style.display = 'block';
-  } else {
-    deferSection.style.display = 'none';
-  }
+  if (deferSection) deferSection.style.display = 'none';
 
   // สรุปยอด
   document.getElementById('rcpRevenue').textContent = formatMoney(data.revenue) + ' ฿';
-  document.getElementById('rcpExpenseSum').textContent = formatMoney(data.expensePaidTotal) + ' ฿';
+  document.getElementById('rcpExpenseSum').textContent = formatMoney(data.expenseTotal) + ' ฿';
   document.getElementById('rcpCashOwner').textContent = formatMoney(data.cashToOwner) + ' ฿';
   document.getElementById('rcpProfit').textContent = formatMoney(data.netProfit) + ' ฿';
+
+  // ถ้าเงินส่งคืนติดลบ → เปลี่ยนสีกล่องในใบเสร็จ
+  const cashLine = document.getElementById('rcpCashOwner').parentElement;
+  if (data.cashToOwner < 0) {
+    cashLine.style.background = 'var(--expense-red)';
+  } else {
+    cashLine.style.background = '';
+  }
 
   document.getElementById('summaryModal').classList.remove('hidden');
 }
@@ -2124,33 +2246,15 @@ function closeSummaryAndReset() {
 }
 
 /* ============================================================
-   จัดการ localStorage รายจ่ายค้าง
-   ============================================================ */
-function saveDeferredToStorage(data) {
-  const key = 'deferred_' + data.branch;
-  // รายการยกไปพรุ่งนี้ทั้งหมด = defer ใหม่ + old ที่ยังยกต่อ
-  const newDeferred = data.expensesDeferred.map(x => ({
-    note: x.note,
-    amount: x.amount,
-    dateIncurred: x.dateIncurred || data.date
-  }));
-  if (newDeferred.length > 0) {
-    localStorage.setItem(key, JSON.stringify(newDeferred));
-  } else {
-    localStorage.removeItem(key);
-  }
-}
-
-/* ============================================================
-   Reset
+   Reset Form หลังส่งข้อมูล (v2.3)
    ============================================================ */
 function resetForm() {
   document.querySelectorAll('.money-input').forEach(i => i.value = '');
   document.querySelectorAll('.auto-calc span').forEach(s => s.textContent = '0 ฿');
   document.getElementById('expenseList').innerHTML = '';
   addExpense();
-  // Reload old expenses (หลังส่งไปแล้วจะเหลือเฉพาะที่ยกต่อ)
-  loadOldExpenses(state.branch);
+  // โหลดยอดติดลบใหม่ (ถ้ามี → จะถูกเพิ่มเป็น row แรก)
+  loadShortageForBranch(state.branch);
   updateDeliveryTotal();
   updateCashBox();
   updateExpenseTotal();
