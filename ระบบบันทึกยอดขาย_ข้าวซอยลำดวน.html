@@ -788,6 +788,11 @@ body {
 
 /* ========== DATE DISPLAY ========== */
 .date-display {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   font-size: 18px;
   font-weight: 700;
   color: var(--text-muted);
@@ -795,6 +800,39 @@ body {
   padding: 10px 14px;
   background: #FEF3C7;
   border-radius: 10px;
+  text-align: center;
+}
+.date-edit-btn {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: var(--primary);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.date-edit-btn:active { transform: scale(0.96); }
+#recordDateInput {
+  font-size: 16px;
+  padding: 8px 10px;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  font-family: inherit;
+  background: white;
+  color: var(--text-main);
+}
+.backdate-banner {
+  font-size: 15px;
+  font-weight: 700;
+  color: #92400E;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 2px solid var(--defer-orange);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
   text-align: center;
 }
 
@@ -1033,7 +1071,12 @@ body {
     <a href="Admin_ตั้งค่าGP.html" style="display:inline-block;margin-top:10px;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:14px;">⚙️ Admin · ตั้งค่า GP</a>
   </div>
 
-  <div class="date-display" id="dateDisplay">📅 วันที่ ...</div>
+  <div class="date-display" id="dateDisplay">
+    <span id="dateDisplayText">📅 วันที่ ...</span>
+    <button type="button" class="date-edit-btn" onclick="toggleDatePicker()">✏️ เปลี่ยนวันที่</button>
+    <input type="date" id="recordDateInput" onchange="onRecordDateChange()" style="display:none;">
+  </div>
+  <div class="backdate-banner" id="backdateBanner" style="display:none;">🕒 กำลังบันทึกย้อนหลัง — ไม่ใช่ข้อมูลของวันนี้ กรุณาตรวจสอบวันที่ให้ถูกต้องก่อนส่ง</div>
 
   <!-- PROGRESS -->
   <div class="progress" id="progressBar">
@@ -1281,19 +1324,75 @@ if (!CONFIG.GOOGLE_SHEETS_URL) {
 let state = {
   branch: null,
   currentStep: 1,
+  recordDateISO: null,  // v2.8: วันที่ที่จะบันทึก (yyyy-mm-dd) — null = ยังไม่ init, จะถูกตั้งเป็นวันนี้ตอน DOMContentLoaded
   shortageData: null,   // v2.4: ข้อมูลยอดติดลบสะสมทั้งหมด {total, since, sinceISO, history[]}
   shortageAmount: 0,    // จำนวนติดลบรวมปัจจุบัน (ใช้คำนวณเฉยๆ)
   gpRates: { ...CONFIG.GP_RATES_DEFAULT }  // GP Rate ปัจจุบันของสาขาที่เลือก
 };
 
+const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+/* ============================================================
+   v2.8: ตัวช่วยจัดการ "วันที่บันทึก" (รองรับบันทึกย้อนหลัง)
+   ============================================================ */
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function isoToThaiDate(iso) {
+  if (!iso) return '-';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`;
+}
+
+function updateDateDisplay() {
+  const iso = state.recordDateISO || todayISO();
+  const isToday = iso === todayISO();
+  const textEl = document.getElementById('dateDisplayText');
+  if (textEl) textEl.textContent = '📅 วันที่ ' + isoToThaiDate(iso) + (isToday ? '' : ' (บันทึกย้อนหลัง)');
+  const banner = document.getElementById('backdateBanner');
+  if (banner) banner.style.display = isToday ? 'none' : 'block';
+}
+
+function toggleDatePicker() {
+  const input = document.getElementById('recordDateInput');
+  if (!input) return;
+  const showing = input.style.display !== 'none';
+  if (showing) {
+    input.style.display = 'none';
+    return;
+  }
+  input.value = state.recordDateISO || todayISO();
+  input.max = todayISO(); // ห้ามเลือกวันในอนาคต
+  input.style.display = 'block';
+  try { input.showPicker(); } catch (e) { input.focus(); }
+}
+
+function onRecordDateChange() {
+  const input = document.getElementById('recordDateInput');
+  if (!input || !input.value) return;
+  let iso = input.value;
+  const max = todayISO();
+  if (iso > max) {
+    iso = max;
+    input.value = iso;
+    showToast('⚠️ เลือกวันในอนาคตไม่ได้ ปรับเป็นวันนี้ให้แล้ว');
+  }
+  state.recordDateISO = iso;
+  input.style.display = 'none';
+  updateDateDisplay();
+}
+
 /* ============================================================
    INIT
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
-  const today = new Date();
-  const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const dateStr = `📅 ${today.getDate()} ${thaiMonths[today.getMonth()]} ${today.getFullYear() + 543}`;
-  document.getElementById('dateDisplay').textContent = dateStr;
+  state.recordDateISO = todayISO();
+  updateDateDisplay();
 
   document.querySelectorAll('.delivery-input').forEach(input => {
     input.addEventListener('input', onDeliveryInput);
@@ -1592,7 +1691,7 @@ function saveShortageToStorage(branch, todayShortage, todayData) {
     return;
   }
 
-  const todayDateISO = new Date(todayData.timestamp).toISOString().split('T')[0];
+  const todayDateISO = todayData.dateISO || new Date(todayData.timestamp).toISOString().split('T')[0];
   const delta = todayShortage - prevTotal;
   const newEntry = {
     date: todayData.date,
@@ -2003,13 +2102,14 @@ function buildPayload() {
   const cashToOwner = cashBox - expenseTotal;  // สามารถติดลบได้
   const netProfit = revenue - expenseTotal;
 
-  const now = new Date();
-  const thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const dateStr = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543}`;
+  const now = new Date(); // เวลาจริงที่กดส่ง (ใช้เป็น audit timestamp เท่านั้น)
+  const recordDateISO = state.recordDateISO || todayISO();
+  const dateStr = isoToThaiDate(recordDateISO);
 
   return {
     branch: state.branch,
     date: dateStr,
+    dateISO: recordDateISO,  // v2.8: ใช้กำหนดว่าข้อมูลนี้เป็นของวันไหน (รองรับบันทึกย้อนหลัง) + ใช้แยก Sheet รายเดือนฝั่ง Apps Script
     timestamp: now.toISOString(),
     // Delivery
     grabGross: grab.gross,       grabNet: grab.net,
